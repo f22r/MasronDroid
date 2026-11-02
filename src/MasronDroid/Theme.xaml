@@ -1,0 +1,105 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <SolidColorBrush x:Key="Ink" Color="#162D3D"/>
+  <SolidColorBrush x:Key="Muted" Color="#526878"/>
+  <SolidColorBrush x:Key="Line" Color="#CFDCE2"/>
+  <SolidColorBrush x:Key="Accent" Color="#126782"/>
+  <SolidColorBrush x:Key="Rail" Color="#152E3E"/>
+  <Style TargetType="TextBlock">
+    <Setter Property="TextWrapping" Value="Wrap"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style x:Key="Body" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+    <Setter Property="Foreground" Value="{StaticResource Muted}"/><Setter Property="FontSize" Value="14"/>
+  </Style>
+  <Style x:Key="Section" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+    <Setter Property="FontSize" Value="20"/><Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+  <Style x:Key="Panel" TargetType="Border">
+    <Setter Property="Background" Value="White"/><Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+    <Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="22,18"/>
+  </Style>
+  <Style TargetType="Button">
+    <Setter Property="Background" Value="White"/><Setter Property="Foreground" Value="{StaticResource Ink}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource Line}"/><Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="14,7"/><Setter Property="MinHeight" Value="34"/>
+    <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+      <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="6">
+        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+      </Border>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="#388DAB"/></Trigger>
+        <Trigger Property="IsPressed" Value="True"><Setter TargetName="Frame" Property="Opacity" Value=".82"/></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="#D17A27"/></Trigger>
+        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value=".50"/><Setter Property="Cursor" Value="Arrow"/></Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style x:Key="Primary" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Setter Property="Background" Value="{StaticResource Accent}"/><Setter Property="BorderBrush" Value="{StaticResource Accent}"/><Setter Property="Foreground" Value="White"/>
+  </Style>
+  <Style x:Key="Nav" TargetType="RadioButton">
+    <Setter Property="Foreground" Value="#DCE8EF"/><Setter Property="Margin" Value="0,2"/><Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+      <Border x:Name="Item" Padding="12,10" CornerRadius="7" BorderBrush="Transparent" BorderThickness="1" Background="Transparent">
+        <ContentPresenter VerticalAlignment="Center"/>
+      </Border>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Item" Property="Background" Value="#233F50"/></Trigger>
+        <Trigger Property="IsChecked" Value="True"><Setter TargetName="Item" Property="Background" Value="#2C5064"/><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Item" Property="BorderBrush" Value="#7FCADD"/></Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="ComboBoxItem">
+    <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem">
+      <Border x:Name="Item" Background="Transparent" Padding="10,7" CornerRadius="4">
+        <ContentPresenter/>
+      </Border>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsSelected" Value="True"><Setter TargetName="Item" Property="Background" Value="#D9EEEF"/></Trigger>
+        <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Item" Property="Background" Value="#C7E5EC"/></Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="ComboBox">
+    <Setter Property="MinHeight" Value="35"/><Setter Property="Foreground" Value="{StaticResource Ink}"/>
+    <Setter Property="MaxDropDownHeight" Value="280"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
+      <Grid>
+        <Border x:Name="Box" Background="White" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="7"/>
+        <ToggleButton Focusable="False" ClickMode="Press" IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+          <ToggleButton.Template><ControlTemplate TargetType="ToggleButton">
+            <Border Background="Transparent"><Path Data="M0,0 L4,4 8,0" Stroke="#396477" StrokeThickness="1.6" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"/></Border>
+          </ControlTemplate></ToggleButton.Template>
+        </ToggleButton>
+        <ContentPresenter Margin="11,4,30,4" VerticalAlignment="Center" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
+        <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="3" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}" Focusable="False">
+          <Border MinWidth="{Binding ActualWidth, ElementName=Box}" MaxHeight="{TemplateBinding MaxDropDownHeight}" Background="White" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="7" Padding="4">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
+          </Border>
+        </Popup>
+      </Grid>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="#4590A2"/></Trigger>
+        <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+        <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Box" Property="Background" Value="#EDF2F4"/></Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style x:Key="WindowButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Width" Value="41"/><Setter Property="MinHeight" Value="31"/><Setter Property="Padding" Value="0"/>
+    <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/><Setter Property="FontSize" Value="11"/>
+    <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#E1EBF0"/></Trigger></Style.Triggers>
+  </Style>
+  <Style x:Key="CloseButton" TargetType="Button" BasedOn="{StaticResource WindowButton}">
+    <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#B3363F"/><Setter Property="Foreground" Value="White"/></Trigger></Style.Triggers>
+  </Style>
+  <Style x:Key="MirrorNav" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Setter Property="MinWidth" Value="0"/><Setter Property="MinHeight" Value="30"/>
+    <Setter Property="Background" Value="#192F3E"/><Setter Property="BorderBrush" Value="#192F3E"/>
+    <Setter Property="Padding" Value="3"/><Setter Property="Margin" Value="2,0"/>
+  </Style>
+</ResourceDictionary>
