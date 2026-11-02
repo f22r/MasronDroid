@@ -42,7 +42,7 @@ ADB and Fastboot come from Google's Android SDK Platform-Tools. Device marketing
 
 ## Screenshots
 
-The screenshots use a simulated phone and sample packages.
+Device, Application, Fastboot, and Recovery are shown on a connected phone. The Console example uses a simulated device.
 
 ### Applications and debloat
 
