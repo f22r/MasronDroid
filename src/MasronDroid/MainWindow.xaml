@@ -389,6 +389,7 @@
                       <WrapPanel Margin="0,0,0,8">
                         <Button Name="InstallApk" Style="{StaticResource Primary}" Content="{DynamicResource Install}" Tag="Install" Margin="0,0,8,4" Click="BatchClick" />
                         <Button Name="RestoreApps" Content="{DynamicResource RestoreBackup}" Tag="RestoreBackup" Margin="0,0,6,4" Click="BatchClick" />
+                        <Button Name="BatchCache" Content="{DynamicResource ClearCache}" Tag="ClearCache" Margin="0,0,6,4" Click="BatchClick" />
                         <Button Name="BatchDisable" Content="{DynamicResource Disable}" Tag="Disable" Margin="0,0,6,4" Click="BatchClick" />
                         <Button Name="BatchEnable" Content="{DynamicResource Enable}" Tag="Enable" Margin="0,0,6,4" Click="BatchClick" />
                         <Button Name="BatchUninstall" Content="{DynamicResource Uninstall}" Tag="Uninstall" Margin="0,0,6,4" Click="BatchClick" />
@@ -397,6 +398,7 @@
                       <TextBlock Name="BatchStatus" TextWrapping="Wrap" Foreground="#24596C" />
                       <Border Background="#E9F2F4" Padding="10,6,24,6" CornerRadius="4">
                         <DockPanel TextElement.FontWeight="SemiBold">
+                          <TextBlock DockPanel.Dock="Right" Width="76" Margin="4,0" TextAlignment="Right" Text="{DynamicResource CacheSize}"/>
                           <TextBlock DockPanel.Dock="Right" Width="82" Margin="4,0" TextAlignment="Right" Text="{DynamicResource InventorySize}" />
                           <TextBlock DockPanel.Dock="Right" Width="126" Margin="12,0" Text="{DynamicResource InventoryRisk}" />
                           <TextBlock Margin="68,0,0,0" Text="{DynamicResource InventoryName}" />
@@ -408,6 +410,7 @@
                             <DockPanel Margin="4,3" Background="#00FFFFFF" MouseLeftButtonUp="InventoryRowClick">
                               <CheckBox VerticalAlignment="Center" Margin="0,0,10,0" IsChecked="{Binding Checked, Mode=TwoWay}" AutomationProperties.Name="{Binding Entry.Name}" Click="InventoryChecked" />
                               <Image Width="32" Height="32" Margin="0,0,10,0" Source="{Binding Image}" />
+                              <TextBlock DockPanel.Dock="Right" Width="76" Margin="4,0" TextAlignment="Right" VerticalAlignment="Center" Text="{Binding Cache}"/>
                               <TextBlock DockPanel.Dock="Right" Width="82" TextAlignment="Right" VerticalAlignment="Center" Margin="4,0" Text="{Binding Size}" />
                               <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Width="126" Margin="12,0" FontWeight="SemiBold" ToolTip="{Binding RatingTip}">
                                 <FrameworkElement.Style>

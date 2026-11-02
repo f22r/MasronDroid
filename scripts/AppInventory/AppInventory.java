@@ -16,6 +16,9 @@ public class AppInventory {
         Object activity = thread.getMethod("systemMain").invoke(null);
         Context context = (Context)thread.getMethod("getSystemContext").invoke(activity);
         PackageManager pm = context.getPackageManager();
+        Context shell = context.createPackageContext("com.android.shell", 0);
+        android.app.usage.StorageStatsManager storage = android.os.Build.VERSION.SDK_INT >= 26
+                ? shell.getSystemService(android.app.usage.StorageStatsManager.class) : null;
         for (ApplicationInfo info : pm.getInstalledApplications(PackageManager.MATCH_UNINSTALLED_PACKAGES)) {
             JSONObject item = new JSONObject();
             item.put("Package", info.packageName);
@@ -23,6 +26,13 @@ public class AppInventory {
             item.put("System", (info.flags & ApplicationInfo.FLAG_SYSTEM) != 0);
             item.put("Installed", (info.flags & ApplicationInfo.FLAG_INSTALLED) != 0);
             item.put("Enabled", info.enabled);
+            if (storage != null && (info.flags & ApplicationInfo.FLAG_INSTALLED) != 0) {
+                try {
+                    long cache = storage.queryStatsForPackage(info.storageUuid, info.packageName,
+                            android.os.Process.myUserHandle()).getCacheBytes();
+                    item.put("CacheBytes", cache);
+                } catch (Exception ignored) { }
+            }
             long bytes = 0;
             boolean readable = info.sourceDir != null;
             java.util.ArrayList<String> paths = new java.util.ArrayList<>();

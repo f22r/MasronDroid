@@ -583,7 +583,7 @@ public partial class MainWindow : Window
             MessageBox.Show(this, explanation, T("BatteryHealth"), MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    private sealed record InventoryEntry(string Package, string Name, bool System, bool Enabled, bool Installed, string? Icon, long? Bytes = null);
+    private sealed record InventoryEntry(string Package, string Name, bool System, bool Enabled, bool Installed, string? Icon, long? Bytes = null, long? CacheBytes = null);
     private static readonly Lazy<Dictionary<string, string[]>> ratings = new(() =>
     {
         using var resource = typeof(MainWindow).Assembly.GetManifestResourceStream("MasronDroid.debloat.gz")!;
@@ -601,13 +601,15 @@ public partial class MainWindow : Window
             rating ??= ratings.Value.GetValueOrDefault(Entry.Package);
         }
         public string Level => rating?[0] ?? "0";
-        public string Size => Entry.Bytes switch
+        public string Size => FormatBytes(Entry.Bytes);
+        public string Cache => FormatBytes(Entry.CacheBytes);
+        public static string FormatBytes(long? bytes) => bytes switch
         {
             null => "—",
-            >= 1073741824 => $"{Entry.Bytes / 1073741824d:0.##} GB",
-            >= 1048576 => $"{Entry.Bytes / 1048576d:0.##} MB",
-            >= 1024 => $"{Entry.Bytes / 1024d:0.##} KB",
-            _ => $"{Entry.Bytes} B"
+            >= 1073741824 => $"{bytes / 1073741824d:0.##} GB",
+            >= 1048576 => $"{bytes / 1048576d:0.##} MB",
+            >= 1024 => $"{bytes / 1024d:0.##} KB",
+            _ => $"{bytes} B"
         };
         public string? RatingTip => rating == null ? null : rating[1] + Environment.NewLine + rating[2];
         public bool Checked { get; set; }
@@ -718,6 +720,13 @@ public partial class MainWindow : Window
         UpdateBatchButtons();
         InventoryStatus.Text = Selected is not { Tool: "adb", State: "device" } ? T("NeedAdb")
             : inventory.Count == 0 ? T("AppLoading") : T("AppResults", rows.Count);
+        if (rows.Count > 0 && Selected is { Tool: "adb", State: "device" })
+        {
+            var known = rows.Where(row => row.Entry.CacheBytes.HasValue).ToList();
+            var total = known.Count > 0 ? InventoryRow.FormatBytes(known.Sum(row => row.Entry.CacheBytes)) : "—";
+            InventoryStatus.Text += $"  ·  {T("CacheSize")} {total}";
+            if (known.Count > 0 && known.Count < rows.Count) InventoryStatus.Text += $" ({known.Count}/{rows.Count})";
+        }
     }
 
     private static readonly string[] AppGroups = ["TotalApps", "SystemApps", "UserApps", "DisabledApps", "RemovedApps"];
@@ -1053,6 +1062,7 @@ public partial class MainWindow : Window
         InstallApk.IsEnabled = ready;
         bool installed = ready && selected.Length > 0 && selected.All(x => x.Entry.Installed);
         BatchUninstall.IsEnabled = installed;
+        BatchCache.IsEnabled = installed;
         BatchDisable.IsEnabled = installed && selected.All(x => x.Entry.Enabled);
         BatchEnable.IsEnabled = installed && selected.All(x => !x.Entry.Enabled);
         BatchCount.Text = T("BatchCount", selected.Length);

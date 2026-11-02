@@ -16,7 +16,7 @@ public record Target(string Tool, string Serial, string State, string Model, str
     public string Details => (Model.Length > 0 ? Model + "  ·  " : "") + Serial + "  ·  " + State;
 }
 
-public enum DeviceAction { RestoreBackup, Install, Uninstall, PackagesEnabled, PackagesDisabled, Disable, Enable, Bootloader, Recovery, System, Product, Sideload, Restart, Shutdown, ReadSlot, BootVersion, RecoveryLog, RecoveryStorage, RecoveryFiles, StartSideload }
+public enum DeviceAction { ClearCache, RestoreBackup, Install, Uninstall, PackagesEnabled, PackagesDisabled, Disable, Enable, Bootloader, Recovery, System, Product, Sideload, Restart, Shutdown, ReadSlot, BootVersion, RecoveryLog, RecoveryStorage, RecoveryFiles, StartSideload }
 public record Discovery(IReadOnlyList<Target> Targets, IReadOnlyList<BridgeException> Errors);
 
 public sealed class AndroidBridge(IPlatformTools tools)
@@ -411,6 +411,14 @@ public sealed class AndroidBridge(IPlatformTools tools)
         await VerifyTarget(expected);
         try
         {
+            if (action == DeviceAction.ClearCache)
+            {
+                if (!IsPackage(value)) throw new BridgeException("InvalidValue");
+                var help = await tools.Run("adb", ["-s", expected.Serial, "shell", "pm", "help"], TimeSpan.FromSeconds(10));
+                if (!help.Ok || !Regex.IsMatch(help.Output, @"(?m)^\s*clear\s+[^\r\n]*--cache-only"))
+                    throw new BridgeException("CacheUnsupported");
+                await VerifyTarget(expected);
+            }
             if (action == DeviceAction.RestoreBackup) return await RestoreBackup(expected, value);
             if (action == DeviceAction.Uninstall && IsPackage(value))
             {
@@ -424,6 +432,7 @@ public sealed class AndroidBridge(IPlatformTools tools)
         }
         string[] args = action switch
         {
+            DeviceAction.ClearCache => ["shell", "pm", "clear", "--user", "0", "--cache-only", value],
             DeviceAction.Install => ["install", "-r", RequireFile(value, ".apk")],
             DeviceAction.Uninstall when IsPackage(value) => ["shell", "pm", "uninstall", "-k", "--user", "0", value],
             DeviceAction.StartSideload => ["reboot", "sideload"],
@@ -450,6 +459,7 @@ public sealed class AndroidBridge(IPlatformTools tools)
             TimeSpan.FromSeconds(longTransfer ? 600 : 20));
         if (!result.Ok || Regex.IsMatch(result.Output, @"^(?:Failure\s*\[|Error:|Exception occurred)", RegexOptions.Multiline | RegexOptions.IgnoreCase))
             throw new BridgeException("ToolFailed", result.Output);
+        if (action == DeviceAction.ClearCache && result.Output.Trim() != "Success") throw new BridgeException("ToolFailed", result.Output);
         if (action == DeviceAction.Uninstall)
         {
             await Task.Delay(TimeSpan.FromSeconds(2));
