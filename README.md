@@ -46,19 +46,19 @@ Device, Application, Fastboot, and Recovery are shown on a connected phone. The 
 
 ### Applications and debloat
 
-![MasronDroid Applications and debloat](docs/screenshots/application.png)
+![MasronDroid Applications and debloat](docs/screenshots/galaxy-application-v003.png)
 
 ### Device
 
-![MasronDroid Device](docs/screenshots/device.png)
+![MasronDroid Device](docs/screenshots/galaxy-device-v003.png)
 
 ### Fastboot
 
-![MasronDroid Fastboot](docs/screenshots/fastboot.png)
+![MasronDroid Fastboot](docs/screenshots/galaxy-fastboot-v003.png)
 
 ### Recovery
 
-![MasronDroid Recovery](docs/screenshots/recovery.png)
+![MasronDroid Recovery](docs/screenshots/galaxy-recovery-v003.png)
 
 ### Console
 
