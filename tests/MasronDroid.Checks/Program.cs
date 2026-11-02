@@ -253,6 +253,25 @@ internal static class Program
             Check(Find<FrameworkElement>(page + "Page").IsVisible, page + " navigation");
         }
 
+        if (imageFolder != null && Environment.GetEnvironmentVariable("MASRONDROID_GALLERY") == "1")
+        {
+            fake.Available = true;
+            fake.Adb = "demo-01\tdevice model:Demo_Phone";
+            fake.Locked = true;
+            Find<ComboBox>("Languages").SelectedIndex = 1;
+            window.Width = 1100;
+            window.Height = 760;
+            Click("ScanButton");
+            foreach (var page in new[] { "Device", "Install", "Fastboot", "Recovery", "Console" })
+            {
+                Go(page);
+                var until = Stopwatch.StartNew();
+                while (until.ElapsedMilliseconds < 800) { Pump(); Thread.Sleep(15); }
+                Snapshot(window, imageFolder, page == "Install" ? "application" : page.ToLowerInvariant());
+            }
+            window.Close();
+            return;
+        }
         Check(Find<TextBlock>("DeviceHeadline").Text == "ADB tidak tersedia", "Indonesian missing-tools state");
         Check(window.WindowStyle == WindowStyle.None && System.Windows.Shell.WindowChrome.GetWindowChrome(window) != null, "Integrated window chrome");
         Snapshot(window, imageFolder, "perangkat-id");

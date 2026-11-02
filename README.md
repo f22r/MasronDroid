@@ -2,6 +2,8 @@
 
 MasronDroid is a Windows x64 desktop app for managing Android devices over USB. It combines ADB, Fastboot, and an interactive phone screen in one workspace. The interface is available in English and Indonesian.
 
+**Debloat your Android phone from Windows.** Review system and user apps, compare package risk ratings, and disable or uninstall selected apps in batches. MasronDroid backs up APK files before uninstalling. Private app data is excluded.
+
 Download the Windows x64 installer or portable ZIP from [GitHub Releases](https://github.com/f22r/MasronDroid/releases).
 
 ## Connect a device
@@ -36,3 +38,28 @@ The [preparation script](scripts/Prepare-Tools.ps1) downloads pinned upstream ar
 **Screen mirroring and input are powered by scrcpy**, developed by **Genymobile and the scrcpy contributors**. MasronDroid bundles the Windows client and matching Android server from scrcpy 5.0.1. Its Apache License 2.0 is included in the application payload at `tools/scrcpy/LICENSE.txt`. [scrcpy project](https://github.com/Genymobile/scrcpy) · [upstream release](https://github.com/Genymobile/scrcpy/releases/tag/v5.0.1) · [license](https://github.com/Genymobile/scrcpy/blob/v5.0.1/LICENSE)
 
 ADB and Fastboot come from Google's Android SDK Platform-Tools. Device marketing names come from Google Play's supported device list. Model illustrations come from contributors to LineageOS Wiki. Velopack provides Windows packaging and updates. [Platform-Tools](https://developer.android.com/tools/releases/platform-tools) · [device catalog](https://storage.googleapis.com/play_public/supported_devices.html) · [device illustrations](https://github.com/LineageOS/lineage_wiki/tree/bf49224b3a8838ad67f42e014435d5feeae5a668/images/devices) · [Velopack](https://github.com/velopack/velopack)
+
+
+## Screenshots
+
+The screenshots use a simulated phone and sample packages.
+
+### Applications and debloat
+
+![MasronDroid Applications and debloat](docs/screenshots/application.png)
+
+### Device
+
+![MasronDroid Device](docs/screenshots/device.png)
+
+### Fastboot
+
+![MasronDroid Fastboot](docs/screenshots/fastboot.png)
+
+### Recovery
+
+![MasronDroid Recovery](docs/screenshots/recovery.png)
+
+### Console
+
+![MasronDroid Console](docs/screenshots/console.png)
