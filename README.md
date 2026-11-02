@@ -10,7 +10,7 @@ MasronDroid adalah aplikasi desktop Windows x64 untuk mengelola perangkat Androi
 
 ## Mengelola perangkat
 
-- **Perangkat** menampilkan mode, perangkat aktif, dan petunjuk koneksi. **Lihat layar** menampilkan HP di halaman Perangkat dan menerima klik, seret, serta input keyboard. Saat Android melaporkan layar terkunci, buka kunci langsung di HP. Panel layar tegak di kanan tetap terlihat saat berpindah halaman. Gunakan tombol Kembali, Beranda, dan Aplikasi terbaru di bawah video.
+- **Perangkat** menampilkan mode, perangkat aktif, dan petunjuk koneksi. **Lihat layar** menampilkan HP di halaman Perangkat dan menerima klik, seret, serta input keyboard. Saat Android melaporkan layar terkunci, buka kunci langsung di HP. Panel layar tegak di kanan tetap terlihat saat berpindah halaman. Aktifkan **Layar tetap menyala** untuk menjaga HP yang sedang tersambung ke daya tetap aktif selama sesi. Mengubah sakelar menyambungkan ulang video sebentar. Gunakan tombol Kembali, Beranda, dan Aplikasi terbaru di bawah video.
 - **Instal APK** memasang satu berkas APK atau memperbarui aplikasi yang sudah terpasang. Periksa berkas dan serial pada dialog konfirmasi.
 - **Debloat** memuat paket aktif atau nonaktif untuk pengguna Android 0. Cari nama paket, pilih satu, lalu nonaktifkan atau aktifkan kembali. MasronDroid membaca ulang status paket sesudah perubahan.
 - **Fastboot** menyediakan reboot ke bootloader, pembacaan nama produk dalam Fastboot, serta reboot ke Android. Pindai ulang setelah perpindahan mode selesai.

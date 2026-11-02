@@ -141,6 +141,8 @@ internal static class Program
         var info = ScreenMirror.StartInfo(@"C:\tools\scrcpy.exe", @"C:\tools\scrcpy-server", @"C:\tools\adb.exe", "demo-01");
         Check(info.ArgumentList.SequenceEqual(["--serial", "demo-01", "--render-driver=software", "--no-clipboard-autosync", "--no-audio", "--window-borderless", "--window-x=-30000", "--window-y=-30000", "--window-title", "MasronDroid · demo-01"])
             && info.Environment["ADB"] == @"C:\tools\adb.exe" && info.Environment["SCRCPY_SERVER_PATH"] == @"C:\tools\scrcpy-server", "scrcpy uses explicit target and bundled ADB and interactive software rendering");
+        var awakeInfo = ScreenMirror.StartInfo(@"C:\tools\scrcpy.exe", @"C:\tools\scrcpy-server", @"C:\toolsdb.exe", "demo-01", true);
+        Check(awakeInfo.ArgumentList.Contains("--stay-awake") && !info.ArgumentList.Contains("--stay-awake"), "Stay-awake flag is scoped to opted-in mirror sessions");
         var bridge = new AndroidBridge(fake);
         var target = (await bridge.Discover()).Targets.Single();
         Check(target is { Serial: "demo-01", State: "device", Model: "Demo Phone" }, "ADB target and model");
@@ -295,6 +297,18 @@ internal static class Program
         mirror.Finish.SetResult(new ToolResult(false, "simulated disconnect"));
         Pump();
         Check(Find<Button>("ViewScreen").IsEnabled && Find<TextBox>("Result").Text.Contains("simulated disconnect"), "Mirror failure is visible and retry is enabled");
+        Click("ViewScreen");
+        var toggle = Find<System.Windows.Controls.Primitives.ToggleButton>("StayAwake");
+        foreach (bool desired in new[] { true, false })
+        {
+            toggle.IsChecked = desired;
+            toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var limit = Stopwatch.StartNew();
+            while ((mirror.Awake != desired || !toggle.IsVisible) && limit.Elapsed < TimeSpan.FromSeconds(6)) { Pump(); Thread.Sleep(30); }
+            Check(mirror.Awake == desired && toggle.IsVisible, "Switch restarts the selected mirror with stay-awake " + desired);
+        }
+        mirror.Finish.SetResult(new ToolResult(true, ""));
+        Pump();
         Go("Install");
         Check(!Find<Button>("InstallApk").IsEnabled, "Install needs a file");
         Go("Debloat");
@@ -344,12 +358,15 @@ internal sealed class FakeMirror : IScreenMirror
 {
     public bool Available => true;
     public string? Serial;
+    public bool Awake;
     public Action<nint>? Attach;
     public TaskCompletionSource<ToolResult> Finish = new();
-    public Task<ToolResult> Watch(string serial, Action<nint> attach, CancellationToken stop)
+    public Task<ToolResult> Watch(string serial, bool stayAwake, Action<nint> attach, CancellationToken stop)
     {
+        Awake = stayAwake;
+        if (Finish.Task.IsCompleted) Finish = new();
         Attach = attach;
         Serial = serial;
-        return Finish.Task;
+        return Finish.Task.WaitAsync(stop);
     }
 }

@@ -121,5 +121,7 @@
   "UpdateUnavailable": "Pembaruan belum dapat diperiksa.",
   "AndroidBack": "Kembali",
   "AndroidHome": "Beranda",
-  "AndroidRecent": "Aplikasi terbaru"
+  "AndroidRecent": "Aplikasi terbaru",
+  "StayAwake": "Layar tetap menyala",
+  "StayAwakeHint": "Pertahankan layar HP menyala selama tersambung ke daya dan sesi layar aktif."
 }

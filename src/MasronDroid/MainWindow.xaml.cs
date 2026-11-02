@@ -14,7 +14,7 @@ public partial class MainWindow : Window
     private AndroidBridge bridge;
     private IScreenMirror mirror;
     private CancellationTokenSource? mirrorSession;
-    private string? lockedSerial, resumeSerial, pictureKey;
+    private string? lockedSerial, resumeSerial, pictureKey, stayAwakeSerial;
     private static readonly System.Net.Http.HttpClient photos = new() { Timeout = TimeSpan.FromSeconds(7) };
     private string? mirrorSerial;
     private bool updatingTargets;
@@ -246,7 +246,7 @@ public partial class MainWindow : Window
             lockedSerial = null;
             statusChanged = true;
         }
-        if (locked == false && resumeSerial != null && resumeSerial == target?.Serial && mirrorSession == null && !busy)
+        if (locked != true && lockedSerial == null && resumeSerial != null && resumeSerial == target?.Serial && mirrorSession == null && !busy)
         {
             resumeSerial = null;
             MirrorClick(ViewScreen, new RoutedEventArgs());
@@ -267,6 +267,7 @@ public partial class MainWindow : Window
 
     private void CheckMirrorTarget()
     {
+        if (Selected?.Serial != stayAwakeSerial) stayAwakeSerial = null;
         if (Selected?.Serial != mirrorSerial || Selected?.State != "device") mirrorSession?.Cancel();
     }
 
@@ -302,6 +303,7 @@ public partial class MainWindow : Window
         }) : T(partialScan ? "ScanError" : Targets.Items.Count > 0 ? "MultiHint" : !adb ? "NoToolsHint" : mtp ? "MtpHint" : "EmptyHint");
         bool viewing = mirrorSession != null;
         MirrorPane.Visibility = viewing ? Visibility.Visible : Visibility.Collapsed;
+        StayAwake.IsChecked = mirrorSerial != null && mirrorSerial == stayAwakeSerial;
         FitMirrorColumn();
         AndroidHome.IsEnabled = AndroidBack.IsEnabled = AndroidRecent.IsEnabled = !busy && !navigationPending && viewing && Selected?.Serial == mirrorSerial && lockedSerial != mirrorSerial;
         MirrorTitle.Text = Selected?.Model ?? T("Mirror");
@@ -368,6 +370,14 @@ public partial class MainWindow : Window
         });
     }
 
+    private void StayAwakeClick(object sender, RoutedEventArgs e)
+    {
+        if (mirrorSession == null || mirrorSerial == null || mirrorSession.IsCancellationRequested) return;
+        stayAwakeSerial = StayAwake.IsChecked == true ? mirrorSerial : null;
+        resumeSerial = mirrorSerial;
+        mirrorSession.Cancel();
+    }
+
     private bool navigationPending;
 
     private void WorkspaceResized(object sender, SizeChangedEventArgs e) => FitMirrorColumn();
@@ -399,7 +409,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var result = await mirror.Watch(serial, VideoSurface.Attach, session.Token);
+            var result = await mirror.Watch(serial, stayAwakeSerial == serial, VideoSurface.Attach, session.Token);
             if (!session.IsCancellationRequested)
             {
                 if (Selected is { State: "device" } target && target.Serial == serial && await bridge.IsLocked(target) == true)

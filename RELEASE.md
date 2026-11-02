@@ -1,6 +1,6 @@
 # Build dan rilis MasronDroid
 
-Target awal adalah versi `0.0.1`, `net10.0-windows`, Windows x64. Versi aplikasi berada di [file proyek](src/MasronDroid/MasronDroid.csproj).
+Rilis awal adalah `0.0.1`. Rilis `0.0.2` menambahkan sakelar layar tetap menyala. Target aplikasi adalah, `net10.0-windows`, Windows x64. Versi aplikasi berada di [file proyek](src/MasronDroid/MasronDroid.csproj).
 
 ## Build diagnostik
 

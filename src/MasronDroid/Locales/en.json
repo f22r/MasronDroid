@@ -121,5 +121,7 @@
   "UpdateUnavailable": "Could not check for updates.",
   "AndroidBack": "Back",
   "AndroidHome": "Home",
-  "AndroidRecent": "Recent apps"
+  "AndroidRecent": "Recent apps",
+  "StayAwake": "Keep screen on",
+  "StayAwakeHint": "Keep the phone awake while plugged in and mirroring."
 }

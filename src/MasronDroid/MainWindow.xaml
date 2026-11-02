@@ -72,6 +72,24 @@
         <Border Grid.Column="1" x:Name="MirrorPane" Visibility="Collapsed" Margin="0,0,14,10" Background="#12232F" CornerRadius="10" Padding="4">
           <DockPanel>
             <TextBlock DockPanel.Dock="Top" x:Name="MirrorTitle" Margin="6,4,6,7" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" FontSize="12" Foreground="White"/>
+            <ToggleButton x:Name="StayAwake" DockPanel.Dock="Top" Click="StayAwakeClick" Margin="3,0,3,5" ToolTip="{DynamicResource StayAwakeHint}" AutomationProperties.Name="{DynamicResource StayAwake}">
+              <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                  <Border x:Name="SwitchBody" Padding="6,4" BorderThickness="1" BorderBrush="Transparent" CornerRadius="5" Background="#203A49">
+                    <DockPanel>
+                      <Border x:Name="Track" DockPanel.Dock="Right" Width="29" Height="16" CornerRadius="8" Background="#617684" VerticalAlignment="Center">
+                        <Ellipse x:Name="Thumb" Width="12" Height="12" Margin="2" Fill="White" HorizontalAlignment="Left"/>
+                      </Border>
+                      <TextBlock Text="{DynamicResource StayAwake}" Margin="0,0,4,0" Foreground="White" FontSize="12"/>
+                    </DockPanel>
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsChecked" Value="True"><Setter TargetName="Track" Property="Background" Value="#12847C"/><Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/></Trigger>
+                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SwitchBody" Property="BorderBrush" Value="White"/></Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </ToggleButton.Template>
+            </ToggleButton>
             <UniformGrid DockPanel.Dock="Bottom" Rows="1" Columns="3" Margin="2,3,2,0">
               <Button x:Name="AndroidBack" Tag="Back" Style="{StaticResource MirrorNav}" Click="AndroidNavClick" ToolTip="{DynamicResource AndroidBack}" AutomationProperties.Name="{DynamicResource AndroidBack}"><Path Data="M 16,2 L 4,9 16,16 Z" Stroke="#DCE8EF" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center"/></Button>
               <Button x:Name="AndroidHome" Tag="Home" Style="{StaticResource MirrorNav}" Click="AndroidNavClick" ToolTip="{DynamicResource AndroidHome}" AutomationProperties.Name="{DynamicResource AndroidHome}"><Path Data="M 10,2 A 7,7 0 1 1 9.99,2 Z" Stroke="#DCE8EF" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center"/></Button>

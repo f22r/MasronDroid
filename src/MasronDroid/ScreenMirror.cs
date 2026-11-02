@@ -7,7 +7,7 @@ namespace MasronDroid;
 public interface IScreenMirror
 {
     bool Available { get; }
-    Task<ToolResult> Watch(string serial, Action<nint> attach, CancellationToken stop);
+    Task<ToolResult> Watch(string serial, bool stayAwake, Action<nint> attach, CancellationToken stop);
 }
 
 public sealed class ScreenMirror(PlatformTools tools) : IScreenMirror
@@ -20,7 +20,7 @@ public sealed class ScreenMirror(PlatformTools tools) : IScreenMirror
 
     public bool Available => File.Exists(Client) && File.Exists(Server);
 
-    public static ProcessStartInfo StartInfo(string client, string server, string adb, string serial)
+    public static ProcessStartInfo StartInfo(string client, string server, string adb, string serial, bool stayAwake = false)
     {
         var start = new ProcessStartInfo(client)
         {
@@ -29,16 +29,17 @@ public sealed class ScreenMirror(PlatformTools tools) : IScreenMirror
         };
         foreach (var arg in new[] { "--serial", serial, "--render-driver=software", "--no-clipboard-autosync", "--no-audio", "--window-borderless", "--window-x=-30000", "--window-y=-30000", "--window-title", "MasronDroid · " + serial })
             start.ArgumentList.Add(arg);
+        if (stayAwake) start.ArgumentList.Add("--stay-awake");
         start.Environment["ADB"] = adb;
         start.Environment["SCRCPY_SERVER_PATH"] = server;
         return start;
     }
 
-    public async Task<ToolResult> Watch(string serial, Action<nint> attach, CancellationToken stop)
+    public async Task<ToolResult> Watch(string serial, bool stayAwake, Action<nint> attach, CancellationToken stop)
     {
         if (!Available) throw new BridgeException("MirrorMissing");
         var adb = tools.Find("adb") ?? throw new BridgeException("ToolMissing", "adb");
-        using var child = new Process { StartInfo = StartInfo(Client, Server, adb, serial) };
+        using var child = new Process { StartInfo = StartInfo(Client, Server, adb, serial, stayAwake) };
         try
         {
             child.Start();

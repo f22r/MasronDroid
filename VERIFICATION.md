@@ -29,3 +29,7 @@ Sebanyak 47 pemeriksaan otomatis lulus. Uji tambahan dengan satu HP ADB terotori
 ## Rilis 0.0.1 � 2 November 2026
 
 56 pemeriksaan lulus, termasuk verifikasi batas jendela pada area kerja Windows, pencocokan nama Galaxy S9 dan ilustrasi berdasarkan model/kode, status keyguard terkunci dan terbuka, serta target yang tetap terpilih. Pengujian fisik mencakup pembacaan keyguard saat terkunci dan sesi scrcpy setelah perangkat dibuka. Model teridentifikasi, sumber ilustrasi merespons HTTP 200, panel kanan terverifikasi tegak, dan perintah Home, Recent, Back berhasil pada target. Ketepatan isi piksel saat transisi dan gestur mouse fisik belum diuji.
+
+## Rilis 0.0.2 · 2 November 2026
+
+59 pemeriksaan lulus pada build Debug. Uji sakelar memeriksa sesi awal tanpa flag, sambung ulang dengan flag --stay-awake, dan sambung ulang tanpa flag setelah dinonaktifkan. Pengujian durasi nyala layar melewati timeout fisik belum dilakukan.
