@@ -6,16 +6,20 @@
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.0.2</Version>
+    <Version>0.0.3-beta.1</Version>
     <ApplicationIcon>Assets\masrondroid.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Assets/debloat.json.gz" LogicalName="MasronDroid.debloat.gz"/>
+    <Content Include="Assets/*-debloat-*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>
     <EmbeddedResource Include="Assets/device-catalog.json.gz" LogicalName="MasronDroid.Assets.device-catalog.json.gz"/>
     <EmbeddedResource Include="Locales\*.json" />
+    <Content Include="Assets/app-inventory.jar" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <Resource Include="Assets\masrondroid.png" />
     <Content Include="../../.runtime/tools/**/*" Link="tools/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 </Project>

@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Automation.Peers;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -29,7 +30,13 @@ internal sealed class FakeTools : IPlatformTools
                 : new ToolResult(true, tool == "adb" ? Adb : Fastboot));
         var cmd = args.Skip(2).ToArray();
         if (Failure != null) return Task.FromResult(new ToolResult(true, Failure));
+        if (cmd.Contains("path")) return Task.FromResult(new ToolResult(true, "package:/data/app/demo/base.apk\npackage:/data/app/demo/split_config.apk"));
+        if (cmd.Contains("sha256sum")) return Task.FromResult(new ToolResult(true, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(new byte[] { 1, 2 })) + "  " + cmd.Last()));
+        if (cmd.FirstOrDefault() == "pull") File.WriteAllBytes(cmd.Last(), new byte[] { 1, 2 });
         if (cmd.Contains("dumpsys")) return Task.FromResult(new ToolResult(true, $"KeyguardServiceDelegate state:\n  showing={Locked.ToString().ToLowerInvariant()}"));
+        if (cmd.Any(x => x.Contains("app_process / AppInventory")))
+            return Task.FromResult(new ToolResult(true, string.Join("\n", new[] { "one", "two" }.Select(name =>
+                System.Text.Json.JsonSerializer.Serialize(new { Name = name, Package = "org.example." + name, Enabled = true, Installed = true, System = false })))));
         if (cmd.Contains("disable-user")) Disabled = !Unconfirmed;
         if (cmd.Contains("enable")) Disabled = false;
         if (cmd.Contains("packages"))
@@ -60,6 +67,7 @@ internal static class Program
     [DllImport("user32")] private static extern nint MonitorFromWindow(nint hwnd, uint flags);
     [DllImport("user32")] private static extern bool GetMonitorInfoW(nint monitor, ref DisplayInfo info);
     [DllImport("user32")] private static extern bool GetWindowRect(nint hwnd, out Bounds rect);
+    [DllImport("user32")] private static extern bool MoveWindow(nint hwnd, int x, int y, int w, int h, bool repaint);
     [DllImport("user32")] private static extern nint GetParent(nint hwnd);
 
     [STAThread]
@@ -103,13 +111,10 @@ internal static class Program
                 while (!condition() && timer.Elapsed < TimeSpan.FromSeconds(25)) { Pump(); Thread.Sleep(50); }
                 if (!condition()) throw new Exception("Live mirror timed out");
             }
-            var start = (Button)window.FindName("ViewScreen");
             Until(() => ((ComboBox)window.FindName("Targets")).SelectedItem != null);
             var info = (TextBlock)window.FindName("DeviceHint");
             Console.WriteLine("Device card: " + ((TextBlock)window.FindName("DeviceHeadline")).Text);
             Console.WriteLine("Current status: " + info.Text);
-            Until(() => start.IsEnabled);
-            start.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             var host = (MirrorHost)window.FindName("VideoSurface");
             Until(() => host.IsVisible && host.Handle != 0 && GetWindow(host.Handle, 5) != 0);
             var child = GetWindow(host.Handle, 5);
@@ -122,7 +127,7 @@ internal static class Program
                 Until(() => button.IsEnabled);
                 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Until(() => button.IsEnabled);
-                var log = (TextBox)window.FindName("Result");
+                var log = (TextBox)window.FindName("ConsoleOutput");
                 Check(log.Text.EndsWith((string)button.ToolTip), "Live navigation command accepted: " + key);
             }
         }
@@ -185,13 +190,14 @@ internal static class Program
         {
             var apk = Path.Combine(dir.FullName, "sample app.apk");
             var zip = Path.Combine(dir.FullName, "demo update.zip");
-            File.WriteAllBytes(apk, []); File.WriteAllBytes(zip, []);
+            File.WriteAllBytes(apk, []); using (System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create)) { }
             await Reject(() => bridge.Execute(target, DeviceAction.Install, zip), "InvalidFile");
             await bridge.Execute(target, DeviceAction.Install, apk);
             Check(fake.Commands.Last().Args.SequenceEqual(["-s", "demo-01", "install", "-r", apk]), "APK path with spaces stays one argument");
             fake.Adb = "demo-01\tsideload";
             await bridge.Execute(target with { State = "sideload" }, DeviceAction.Sideload, zip);
-            Check(fake.Commands.Last().Args.SequenceEqual(["-s", "demo-01", "sideload", zip]), "Recovery ZIP targets sideload only");
+            var staged = fake.Commands.Last().Args.Last();
+            Check(staged != zip && File.ReadAllBytes(staged).SequenceEqual(File.ReadAllBytes(zip)) && fake.Commands.Last().Args.SequenceEqual(["-s", "demo-01", "sideload", staged]), "Recovery ZIP targets sideload only");
         }
         finally { foreach (var file in dir.GetFiles()) file.Delete(); dir.Delete(); }
     }
@@ -228,6 +234,13 @@ internal static class Program
         T Find<T>(string name) where T : FrameworkElement => (T)window.FindName(name);
         void Click(string name)
         {
+            if (Find<FrameworkElement>(name) is ToggleButton toggle)
+            {
+                toggle.IsChecked = toggle.IsChecked != true;
+                toggle.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                Pump();
+                return;
+            }
             var button = Find<Button>(name);
             if (!button.IsEnabled) throw new Exception("Unexpected disabled control: " + name);
             ((IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)!).Invoke();
@@ -237,7 +250,7 @@ internal static class Program
         {
             Find<RadioButton>("Nav" + page).IsChecked = true;
             Pump();
-            Check(Find<StackPanel>(page + "Page").IsVisible, page + " navigation");
+            Check(Find<FrameworkElement>(page + "Page").IsVisible, page + " navigation");
         }
 
         Check(Find<TextBlock>("DeviceHeadline").Text == "ADB tidak tersedia", "Indonesian missing-tools state");
@@ -261,16 +274,19 @@ internal static class Program
         while (Find<ComboBox>("Targets").Items.Count == 0 && DateTime.UtcNow < deadline) { Pump(); Thread.Sleep(30); }
         var targets = Find<ComboBox>("Targets");
         Check(targets.Items.Count == 2 && targets.SelectedIndex == -1, "Multiple devices require explicit selection");
-        Check(!Find<Button>("ViewScreen").IsEnabled, "Mirror disabled until a device is selected");
+        Check(!Find<Border>("MirrorPane").IsVisible, "Mirror disabled until a device is selected");
         targets.SelectedIndex = 0;
         fake.Locked = true;
         Click("ScanButton");
-        Check(targets.SelectedItem != null && !Find<Button>("ViewScreen").IsEnabled && Find<TextBlock>("DeviceHint").Text.Contains("terkunci"), "Locked phone remains selected and prompts for local unlock");
+        Check(targets.SelectedItem != null && Find<Border>("MirrorPane").IsVisible && !Find<MirrorHost>("VideoSurface").IsVisible && Find<TextBlock>("DeviceHint").Text.Contains("terkunci"), "Locked phone remains selected and prompts for local unlock");
         fake.Locked = false;
         Click("ScanButton");
-        Check(Find<Button>("ViewScreen").IsEnabled, "Unlock restores access without disconnect");
-        Click("ViewScreen");
-        Check(Find<Border>("MirrorPane").IsVisible && Find<ScrollViewer>("PageScroll").IsVisible && mirror.Serial == "demo-01" && !Find<Button>("ViewScreen").IsEnabled, "Mirror opens once for selected ADB target");
+
+        Check(Find<Border>("MirrorPane").IsVisible && Find<ScrollViewer>("PageScroll").IsVisible && mirror.Serial == "demo-01", "Mirror opens once for selected ADB target");
+        var pane = Find<Border>("MirrorPane");
+        var workspace = Find<Grid>("WorkspaceBody");
+        Check(Math.Abs(pane.TranslatePoint(new Point(0, pane.ActualHeight), workspace).Y + 12 - workspace.ActualHeight) < 1,
+            "Portrait pane leaves space below navigation");
         using (var video = Process.Start(new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "MasronDroid.Checks.exe"), "--test-video-window") { UseShellExecute = false })!)
         {
             try
@@ -286,18 +302,31 @@ internal static class Program
                 var hwnd = video.MainWindowHandle;
                 mirror.Attach!(hwnd);
                 Check(GetParent(hwnd) == surface.Handle, "External video window embedded inside WPF");
+                MoveWindow(hwnd, 0, 0, 80, 120, true);
+                var fitTimeout = Stopwatch.StartNew();
+                bool fits;
+                do
+                {
+                    Pump(); Thread.Sleep(25);
+                    GetWindowRect(surface.Handle, out var hostBounds);
+                    GetWindowRect(hwnd, out var videoBounds);
+                    fits = videoBounds.Equals(hostBounds);
+                } while (!fits && fitTimeout.Elapsed < TimeSpan.FromSeconds(3));
+                Check(fits, "Video fills the host again after a late client resize");
             }
             finally { if (!video.HasExited) video.Kill(); video.WaitForExit(); }
         }
-        foreach (var (key, code) in new[] { ("Back","4"), ("Home","3"), ("Recent","187") })
+        foreach (var (key, code) in new[] { ("Back","4"), ("Home","3"), ("Recent","187"), ("Power","26"), ("VolumeDown","25"), ("VolumeUp","24") })
         {
             Click("Android" + key);
             Check(fake.Commands.Last().Args.SequenceEqual(["-s", "demo-01", "shell", "input", "keyevent", code]), "Embedded Android navigation " + key);
         }
+        Click("AndroidCamera");
+        Check(fake.Commands.Last().Args.SequenceEqual(["-s", "demo-01", "shell", "am", "start", "-a", "android.media.action.STILL_IMAGE_CAMERA"]), "Open camera for selected device");
         mirror.Finish.SetResult(new ToolResult(false, "simulated disconnect"));
         Pump();
-        Check(Find<Button>("ViewScreen").IsEnabled && Find<TextBox>("Result").Text.Contains("simulated disconnect"), "Mirror failure is visible and retry is enabled");
-        Click("ViewScreen");
+        Check(Find<Border>("MirrorPane").IsVisible && Find<TextBox>("ConsoleOutput").Text.Contains("simulated disconnect"), "Mirror failure is visible and retry is enabled");
+        Click("ScanButton");
         var toggle = Find<System.Windows.Controls.Primitives.ToggleButton>("StayAwake");
         foreach (bool desired in new[] { true, false })
         {
@@ -307,18 +336,51 @@ internal static class Program
             while ((mirror.Awake != desired || !toggle.IsVisible) && limit.Elapsed < TimeSpan.FromSeconds(6)) { Pump(); Thread.Sleep(30); }
             Check(mirror.Awake == desired && toggle.IsVisible, "Switch restarts the selected mirror with stay-awake " + desired);
         }
+        foreach (bool landscape in new[] { true, false })
+        {
+            Click("AndroidRotate");
+            Check(fake.Commands.Last().Args.SequenceEqual(["-s", "demo-01", "shell", "wm", "user-rotation", "lock", landscape ? "1" : "0"]) && toggle.IsVisible && Find<ItemsControl>("DeviceFacts").IsVisible != landscape,
+                "Rotation updates mirror and device information visibility: " + landscape);
+            window.UpdateLayout();
+            Check(targets.IsVisible && Find<TextBlock>("LandscapeDevice").IsVisible == landscape
+                && !Find<DockPanel>("ConsolePage").IsVisible,
+                "Rotation keeps the selector visible and the console hidden: " + landscape);
+            var surface = Find<MirrorHost>("VideoSurface");
+            Check(new[] { "Back", "Home", "Recent" }
+                .Select(key => Find<Button>("Android" + key))
+                .All(button => button.IsVisible && button.TranslatePoint(new Point(), surface).Y >= surface.ActualHeight),
+                "Navigation is below the video: " + landscape);
+            Check(new[] { "Camera", "Power", "VolumeDown", "VolumeUp", "Rotate" }
+                .Select(key => Find<Button>("Android" + key))
+                .All(button => button.IsVisible && button.TranslatePoint(new Point(0, button.ActualHeight), surface).Y <= 0),
+                "Device controls are above the video: " + landscape);
+        }
+        fake.Locked = true;
+        Click("ScanButton");
+        Pump();
+        Check(pane.IsVisible && Find<Button>("AndroidBack").IsVisible && !Find<MirrorHost>("VideoSurface").IsVisible,
+            "Lock keeps the panel and controls visible with the video dark");
+        fake.Locked = false;
+        Click("ScanButton");
+        Pump();
+        var unlockDeadline = Stopwatch.StartNew();
+        while (!Find<Button>("AndroidBack").IsEnabled && unlockDeadline.Elapsed < TimeSpan.FromSeconds(8)) { Pump(); Thread.Sleep(30); }
+        Check(pane.IsVisible && Find<MirrorHost>("VideoSurface").IsVisible && Find<Button>("AndroidBack").IsEnabled,
+            "Unlock restores the interactive mirror");
         mirror.Finish.SetResult(new ToolResult(true, ""));
         Pump();
         Go("Install");
-        Check(!Find<Button>("InstallApk").IsEnabled, "Install needs a file");
-        Go("Debloat");
-        Click("LoadPackages");
-        var list = Find<ListBox>("PackageList");
-        Check(list.Items.Count == 1, "Load packages from selected device");
-        Find<TextBox>("Filter").Text = "unmatched";
-        Check(list.Items.Count == 0 && !Find<Button>("ChangePackage").IsEnabled, "Empty filtered package state");
-        Find<TextBox>("Filter").Clear();
-        list.SelectedIndex = 0;
+        Check(Find<Button>("InstallApk").IsEnabled && !pane.IsVisible, "Application accepts APKs and hides the mirror");
+        Click("ScanButton");
+        var list = Find<ListBox>("InventoryList");
+        var inventoryDeadline = DateTime.UtcNow.AddSeconds(8);
+        while (list.Items.Count < 2 && DateTime.UtcNow < inventoryDeadline) { Pump(); Thread.Sleep(30); }
+        Check(list.Items.Count == 2, "Inventory includes both simulated apps");
+        foreach (var item in list.Items)
+            item.GetType().GetProperty("Checked")!.SetValue(item, true);
+        list.Items.Refresh();
+        Find<ComboBox>("Languages").SelectedIndex = 1;
+        Check(Find<Button>("BatchUninstall").IsEnabled, "Both checked apps can be removed");
         bool sawDialog = false;
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         timer.Tick += (_, _) =>
@@ -331,12 +393,36 @@ internal static class Program
             dialog.DialogResult = false;
         };
         timer.Start();
-        Click("ChangePackage");
+        Click("BatchUninstall");
         timer.Stop();
-        Check(sawDialog && !fake.Disabled, "Cancel confirmation leaves package enabled");
+        Check(sawDialog && !fake.Commands.Any(c => c.Args.Contains("uninstall")), "Cancel batch leaves both packages installed");
         Find<ComboBox>("Languages").SelectedIndex = 1;
-        Check(Find<TextBlock>("PageDescription").Text.StartsWith("Disable or re-enable"), "Switch to English in place");
-        Snapshot(window, imageFolder, "debloat-en");
+        var approve = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        approve.Tick += (_, _) =>
+        {
+            var dialog = app.Windows.OfType<Window>().FirstOrDefault(w => w.Owner == window);
+            if (dialog == null) return;
+            approve.Stop();
+            dialog.DialogResult = true;
+        };
+        approve.Start();
+        Click("BatchUninstall");
+        var batchDeadline = DateTime.UtcNow.AddSeconds(8);
+        while (fake.Commands.Count(c => c.Args.Contains("uninstall")) < 2 && DateTime.UtcNow < batchDeadline) { Pump(); Thread.Sleep(20); }
+        Check(fake.Commands.Count(c => c.Args.Contains("uninstall") && c.Args.Contains("--user")) == 2, "Confirmed batch removes both apps for the main profile");
+        var backup = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Backups"), "org.example.one_*.mdbackup").OrderDescending().First();
+        Task.Run(() => new AndroidBridge(fake).Execute(AndroidBridge.Parse("adb", fake.Adb).First(), DeviceAction.RestoreBackup, backup)).GetAwaiter().GetResult();
+        Check(fake.Commands.Any(c => c.Args.Contains("install-multiple") && c.Args.Count(a => a.EndsWith(".apk")) == 2), "Restore verified base and split APKs together");
+        Go("Console");
+        Find<TextBox>("AdbCommand").Text = "adb version";
+        var input = Find<TextBox>("AdbCommand");
+        input.Focus();
+        input.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
+            PresentationSource.FromVisual(input)!, Environment.TickCount, System.Windows.Input.Key.Enter)
+            { RoutedEvent = System.Windows.Input.Keyboard.KeyDownEvent });
+        var commandTimeout = Stopwatch.StartNew();
+        while (Find<Button>("StopCommand").IsEnabled && commandTimeout.Elapsed < TimeSpan.FromSeconds(8)) { Pump(); Thread.Sleep(30); }
+        Check(Find<TextBox>("ConsoleOutput").Text.Contains("Android Debug Bridge version"), "Manual ADB output reaches the console");
         Go("Fastboot");
         Check(Find<Button>("EnterBoot").IsEnabled && !Find<Button>("ReadProduct").IsEnabled, "Boot controls respect ADB mode");
         window.Width = window.MinWidth;
@@ -345,8 +431,8 @@ internal static class Program
         Snapshot(window, imageFolder, "recovery-en-small");
         Check(!Find<Button>("SendZip").IsEnabled, "Recovery sideload gated in Android mode");
         targets.SelectedIndex = 1;
-        Go("Debloat");
-        Check(list.Items.Count == 0 && !Find<Button>("LoadPackages").IsEnabled, "Target switch clears packages and disables unauthorized writes");
+        Go("Install");
+        Check(list.Items.Count == 0 && !Find<Button>("BatchUninstall").IsEnabled, "Target switch clears packages and disables unauthorized writes");
         Go("Device");
         Check(Find<TextBlock>("DeviceHint").Text.Contains("Unlock the screen"), "Actionable unauthorized message");
         window.Close();

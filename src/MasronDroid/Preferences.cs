@@ -9,6 +9,13 @@ public sealed class Preferences
         "MasronDroid", "preferences.json");
     public string Language { get; set; } = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en" ? "en" : "id";
 
+    public double WindowWidth { get; set; }
+    public double WindowHeight { get; set; }
+    public double LogHeight { get; set; }
+    public bool Maximized { get; set; }
+    public string Page { get; set; } = "Device";
+    public string[] History { get; set; } = [];
+
     public static Preferences Load()
     {
         try { return JsonSerializer.Deserialize<Preferences>(File.ReadAllText(FileName)) ?? new(); }

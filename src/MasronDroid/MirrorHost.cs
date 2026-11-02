@@ -7,6 +7,9 @@ namespace MasronDroid;
 public sealed class MirrorHost : HwndHost
 {
     private nint video;
+    private readonly System.Windows.Threading.DispatcherTimer sizeMonitor = new() { Interval = TimeSpan.FromMilliseconds(150) };
+
+    public MirrorHost() => sizeMonitor.Tick += (_, _) => Fit();
     private const int WindowStyleIndex = -16, Child = 0x40000000, Visible = 0x10000000;
 
     protected override HandleRef BuildWindowCore(HandleRef parent)
@@ -16,21 +19,32 @@ public sealed class MirrorHost : HwndHost
         return new(this, window);
     }
 
+    public double AspectRatio { get; private set; } = 9d / 19.5;
+
     public void Attach(nint window)
     {
+        if (GetClientRect(window, out var content) && content.Right > 0 && content.Bottom > 0)
+            AspectRatio = (double)content.Right / content.Bottom;
         int style = GetWindowLongW(window, WindowStyleIndex);
         SetWindowLongW(window, WindowStyleIndex, (style & ~unchecked((int)0x80CF0000)) | Child);
         if (SetParent(window, Handle) == 0 && Marshal.GetLastWin32Error() != 0)
             throw new Win32Exception();
         video = window;
+        sizeMonitor.Start();
         Fit();
     }
 
-    public void Forget() => video = 0;
+    public void Forget()
+    {
+        sizeMonitor.Stop();
+        video = 0;
+        AspectRatio = 9d / 19.5;
+    }
 
     private void Fit()
     {
-        if (video != 0 && GetClientRect(Handle, out var rect))
+        if (video != 0 && IsVisible && GetClientRect(Handle, out var rect) && GetClientRect(video, out var child) &&
+            (rect.Right != child.Right || rect.Bottom != child.Bottom))
             SetWindowPos(video, 0, 0, 0, Math.Max(1, rect.Right), Math.Max(1, rect.Bottom), 0x4054);
     }
 
@@ -40,7 +54,7 @@ public sealed class MirrorHost : HwndHost
         return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
     }
 
-    protected override void DestroyWindowCore(HandleRef window) => DestroyWindow(window.Handle);
+    protected override void DestroyWindowCore(HandleRef window) { sizeMonitor.Stop(); DestroyWindow(window.Handle); }
 
     [StructLayout(LayoutKind.Sequential)] private struct Rect { public int Left, Top, Right, Bottom; }
     [DllImport("user32", CharSet = CharSet.Unicode, SetLastError = true)] private static extern nint CreateWindowExW(int ex, string cls, string title, int style, int x, int y, int w, int h, nint parent, nint menu, nint instance, nint data);

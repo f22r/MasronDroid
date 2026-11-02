@@ -27,3 +27,7 @@ adbkey*
 # Keep working notes local. The public user guide includes upstream credits.
 *.md
 !/README.md
+
+Backups/
+*.mdbackup
+SideloadPackages/

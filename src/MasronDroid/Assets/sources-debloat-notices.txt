@@ -1,0 +1,7 @@
+Debloat catalog sources
+UAD-NG: https://github.com/Universal-Debloater-Alliance/universal-android-debloater-next-generation/blob/69ca5269151ab0788eae7af851090702974a9153/resources/assets/uad_lists.json
+UAD Classic: https://github.com/0x192/universal-android-debloater/blob/11f27c671cba278d71296cdef4c5a5dba06add5e/resources/assets/uad_lists.json
+The projects share ancestry. MasronDroid joins their package IDs, retains the higher risk when ratings differ, and prefers the NG description. The compressed JSON contains the editable catalog. Upstream license texts accompany this file.
+App Manager: https://github.com/MuntashirAkon/AppManager/blob/0d1d926a858c0236d6c2aed0c434992d4187f3a5/app/src/main/assets/debloat.json
+Xiaomi Debloater: https://github.com/fadeltd/xiaomi-debloater/blob/da8a21c4b1e163dafff3a97e80491a0ef1642f8a/bloatware.json (Xiaomi, Redmi and POCO only). Some sources reuse UAD. Conflicts retain the highest applicable risk.
+Prune brand package data: https://github.com/26August/Prune/tree/462e8dc9696d8564f27f59414875c8658afb3608/app/src/main/assets/packages . Brand-specific overlays retain upstream verification flags; optional and unverified safe entries are treated as at least Caution.

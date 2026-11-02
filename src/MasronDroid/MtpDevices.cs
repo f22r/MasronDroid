@@ -13,6 +13,16 @@ internal static class MtpDevices
     [DllImport("cfgmgr32.dll", CharSet = CharSet.Unicode)]
     private static extern uint CM_Get_Device_ID_ListW(string filter, [Out] char[] buffer, uint size, uint flags);
 
+    public static bool IsOdinPresent()
+    {
+        const uint presentUsbEnumerator = 0x100 | 0x1;
+        if (CM_Get_Device_ID_List_SizeW(out uint size, "USB", presentUsbEnumerator) != 0 || size <= 1) return false;
+        var buffer = new char[size];
+        if (CM_Get_Device_ID_ListW("USB", buffer, size, presentUsbEnumerator) != 0) return false;
+        return new string(buffer).Split('\0').Any(id =>
+            id.StartsWith(@"USB\VID_04E8&PID_685D\", StringComparison.OrdinalIgnoreCase));
+    }
+
     public static bool IsPresent()
     {
         if (CM_Get_Device_ID_List_SizeW(out uint size, PortableDeviceClass, PresentClass) != 0 || size <= 1) return false;
