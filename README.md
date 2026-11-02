@@ -29,7 +29,7 @@ Use Windows x64, PowerShell, and a .NET SDK that supports .NET 10. Run these com
 dotnet run --project src/MasronDroid/MasronDroid.csproj
 ```
 
-The [preparation script](scripts/Prepare-Tools.ps1) downloads pinned upstream archives and verifies their SHA-256 hashes. See the [release guide](RELEASE.md) for packaging and the [verification record](VERIFICATION.md) for test coverage.
+The [preparation script](scripts/Prepare-Tools.ps1) downloads pinned upstream archives and verifies their SHA-256 hashes. Run [Build-Release.ps1](scripts/Build-Release.ps1) to generate the installer, portable ZIP, and GitHub update feed. Run `dotnet run --project tests/MasronDroid.Checks -c Release` for the [automated checks](tests/MasronDroid.Checks/Program.cs).
 
 ## Credits
 
