@@ -1,35 +1,21 @@
-# Verifikasi MasronDroid
+# Verification record
 
-## 2 November 2026 · versi lokal 0.1.0
+## November 2, 2026 · Initial development build
 
-Repositori [f22r/MasronDroid](https://github.com/f22r/MasronDroid) berstatus publik dan kosong saat init. Pemeriksaan refs, branch, tag, dan GitHub Releases dilakukan sebelum pembuatan source lokal.
+The public repository was empty before initialization. The initial local build carried version 0.1.0. The public release sequence starts at 0.0.1.
 
-**Build.** Aplikasi dan proyek uji berhasil dibangun dalam konfigurasi Release dengan 0 error dan 0 warning. SDK yang digunakan adalah .NET 11 RC3 dengan target .NET 10 Windows. Build portabel memakai runtime mandiri `win-x64`. Verifikasi menggunakan SDK .NET 10 stabil pada mesin terpisah masih terbuka.
+The WPF application and checks built with zero errors and warnings using the .NET 11 RC3 SDK targeting .NET 10 Windows. The original 44 simulated checks covered transport selection, disconnects, mode changes, paths containing spaces, package confirmation and readback, and mirror failures. Additional work brought the total to 45 for MTP discovery and 47 for the embedded native mirror host. The local package included 18 verified tool files, with ADB 1.0.41 and Fastboot from Platform-Tools 37.0.1 and scrcpy 5.0.1.
 
-**Uji simulasi.** 44 pemeriksaan lulus. [Proyek uji](tests/MasronDroid.Checks/Program.cs) mencakup pemilihan transport dan target, perubahan mode, disconnect, pemindaian parsial, argumen APK dan ZIP dengan spasi, konfirmasi dan pembatalan perubahan paket, verifikasi status paket, serta penanganan kegagalan scrcpy. Fixture memakai identitas dan paket sintetis.
+UI checks covered all five pages, language switching, the frameless shell, maximize/restore, and unauthorized devices. Synthetic renders can be regenerated in artifacts/verification. Device writes and visual pixel comparisons on a real phone were not part of these checks.
 
-**UI Windows.** Jendela aplikasi hasil build dibuka dan diperiksa sesudah bilah judul native dihilangkan. Uji WPF memeriksa kelima halaman, perubahan bahasa, maksimalkan/pulihkan, konfirmasi, dan state yang menolak target tanpa izin. Render terbaru mencakup tombol Lihat layar dan keadaan tiga alat. Bukti lokal yang dapat diregenerasi berada di `artifacts/verification/` dengan nama `masrondroid-id.png`, `debloat-en.png`, `konfirmasi-id.png`, dan `recovery-en-small.png`. Render memakai transport simulasi. Pembukaan interaktif terakhir untuk EXE portabel tidak terverifikasi karena sesi pemeriksaan desktop dihentikan.
+## November 2, 2026 · 0.0.1
 
-**Paket.** Folder `artifacts/MasronDroid-win-x64/` berisi satu EXE dan 18 file alat. Setiap file alat dalam folder distribusi cocok dengan file hasil ekstraksi arsip yang hash-nya diperiksa. ADB melaporkan 1.0.41 dari Platform-Tools 37.0.1, Fastboot melaporkan 37.0.1, dan scrcpy 5.0.1 berhasil memuat pustakanya. Percobaan scrcpy dengan serial sintetis yang tidak terhubung menghasilkan exit code 1 dan diagnostik ADB.
+56 automated checks passed. They covered maximized window bounds against the monitor work area, device catalog matching, locked and unlocked states, selected target retention, and serial-bound Android navigation.
 
-**Perangkat dan publikasi.** Pemindaian dengan CLI dalam paket menghasilkan 0 target ADB dan 0 target Fastboot. Transfer APK, perubahan paket, reboot, pemasangan ZIP oleh recovery, dan video perangkat nyata belum diuji. Folder portabel tersedia lokal. Tag, aset rilis, dan perubahan remote belum diterbitkan.
+A physical device reported an active keyguard and was then unlocked by its operator. The app identified its model, the illustration source returned HTTP 200, and scrcpy attached to the right portrait panel. Home, Recent apps, and Back commands completed on that target. Physical mouse gestures and frame content throughout a complete lock/unlock cycle were not independently verified.
 
-## Catatan pengujian berikutnya
+## November 2, 2026 · 0.0.2
 
-Catat tanggal, revisi, versi Platform-Tools dan scrcpy, versi Windows/Android, mode target, langkah, hasil, dan bukti yang dapat dibagikan. Untuk pengujian perangkat, gunakan identitas anonim. Bedakan hasil perintah PC, perubahan yang dibaca ulang di perangkat, tampilan UI, dan hasil pascapemindaian.
+59 automated checks passed. An initial mirror omits the keep-awake flag. Toggling the switch reconnects the selected mirror with the flag, then removes it when toggled off. The physical phone's timeout interval has not been measured.
 
-## Pembaruan deteksi dan terminal � 2 November 2026
-
-Build portabel diperbarui menggunakan arsip dependensi terverifikasi. Sebanyak 45 pemeriksaan simulasi lulus, termasuk transisi otomatis dari petunjuk MTP ke daftar target ADB, kondisi unauthorized, dan log kegagalan. Render halaman Perangkat memperlihatkan dropdown baru dan pegangan terminal. Transisi USB pada HP fisik dan drag dengan mouse fisik belum diuji.
-
-## 2 November 2026 · layar HP di dalam aplikasi
-
-Sebanyak 47 pemeriksaan otomatis lulus. Uji tambahan dengan satu HP ADB terotorisasi menjalankan scrcpy asli pada build Debug. Handle jendela scrcpy terverifikasi sebagai anak panel WPF. Tombol Hentikan tampilan mengakhiri sesi dan mengembalikan halaman Perangkat. Isi piksel layar HP tidak direkam atau diperiksa.
-
-## Rilis 0.0.1 � 2 November 2026
-
-56 pemeriksaan lulus, termasuk verifikasi batas jendela pada area kerja Windows, pencocokan nama Galaxy S9 dan ilustrasi berdasarkan model/kode, status keyguard terkunci dan terbuka, serta target yang tetap terpilih. Pengujian fisik mencakup pembacaan keyguard saat terkunci dan sesi scrcpy setelah perangkat dibuka. Model teridentifikasi, sumber ilustrasi merespons HTTP 200, panel kanan terverifikasi tegak, dan perintah Home, Recent, Back berhasil pada target. Ketepatan isi piksel saat transisi dan gestur mouse fisik belum diuji.
-
-## Rilis 0.0.2 · 2 November 2026
-
-59 pemeriksaan lulus pada build Debug. Uji sakelar memeriksa sesi awal tanpa flag, sambung ulang dengan flag --stay-awake, dan sambung ulang tanpa flag setelah dinonaktifkan. Pengujian durasi nyala layar melewati timeout fisik belum dilakukan.
+For future checks, record the version, platform, device mode, steps, expected and observed results, and remaining gaps. Use synthetic or anonymized identifiers for public evidence.
