@@ -2,7 +2,7 @@
 
 MasronDroid is a Windows x64 desktop app for managing Android devices over USB. It combines ADB, Fastboot, and an interactive phone screen in one workspace. The interface is available in English and Indonesian.
 
-**[Download the latest release](https://github.com/f22r/MasronDroid/releases/latest)**. Choose **MasronDroid-win-Setup.exe** to install, or extract the entire **MasronDroid-win-Portable.zip** and open MasronDroid.exe. Both distributions include the required tools and check GitHub Releases for updates. Downloaded updates take effect on a subsequent launch.
+No public binaries are currently available. To run the app, follow [Build from source](#build-from-source) below.
 
 ## Connect a device
 
