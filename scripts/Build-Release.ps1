@@ -6,7 +6,7 @@ Push-Location $root
 try {
     $project = [xml](Get-Content -LiteralPath 'src/MasronDroid/MasronDroid.csproj' -Raw)
     $version = $project.Project.PropertyGroup.Version
-    $staging = Join-Path $root 'artifacts/release-input'
+    $staging = Join-Path $root "artifacts/release-input-v$version-$([Guid]::NewGuid().ToString('N'))"
     & (Join-Path $PSScriptRoot 'Build-Portable.ps1') -OutputDirectory $staging
     dotnet tool restore
     if ($LASTEXITCODE) { throw 'Could not restore Velopack.' }

@@ -56,7 +56,7 @@ ADB and Fastboot come from Google's Android SDK Platform-Tools. Device marketing
 
 ## Screenshots
 
-Captured from the current Windows source build on November 3, 2026, with a connected Redmi Note 9. Fastboot and Recovery pages are shown while the phone remains in Android; mode-specific controls are therefore disabled. Device identifiers and private console output are hidden in public images. Published release installers may lag behind the source build shown here.
+Captured from the Windows development build on November 3, 2026, with a connected Redmi Note 9. These features are included in version 0.0.5; the captures retain the development version label. Fastboot and Recovery pages are shown while the phone remains in Android; mode-specific controls are therefore disabled. Device identifiers and private console output are hidden in public images.
 
 ### Applications and debloat
 
