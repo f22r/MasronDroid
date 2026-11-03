@@ -44,7 +44,7 @@ public class AppInventory {
                 else bytes += file.length();
             }
             if (readable) item.put("Bytes", bytes);
-            try {
+            if (args.length == 0) try {
                 item.put("Name", info.loadLabel(pm).toString());
                 Drawable icon = info.loadIcon(pm);
                 Bitmap bitmap = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888);

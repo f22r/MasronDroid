@@ -31,3 +31,5 @@ adbkey*
 Backups/
 *.mdbackup
 SideloadPackages/
+
+RootingPackages/

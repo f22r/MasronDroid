@@ -19,7 +19,11 @@
     <Content Include="../../.runtime/tools/**/*" Link="tools/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="MasronDroid.Checks" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="SharpCompress" Version="0.50.4" />
     <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 </Project>

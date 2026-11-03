@@ -15,6 +15,8 @@ public sealed class Preferences
     public bool Maximized { get; set; }
     public string Page { get; set; } = "Device";
     public string[] History { get; set; } = [];
+    public Dictionary<string, bool> ScreenAwakeChoices { get; set; } = [];
+    public Dictionary<string, ScreenPowerSettings> ScreenAwakeOriginal { get; set; } = [];
 
     public static Preferences Load()
     {

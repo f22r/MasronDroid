@@ -29,6 +29,12 @@
                 <TextBlock Text="{DynamicResource ApplicationMenu}" />
               </StackPanel>
             </RadioButton>
+            <RadioButton Name="NavRooting" Tag="Rooting" GroupName="Navigation" Style="{StaticResource Nav}" AutomationProperties.Name="{DynamicResource Rooting}" Checked="Navigate">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0" Text="&#xE72E;"/>
+                <TextBlock Text="{DynamicResource Rooting}"/>
+              </StackPanel>
+            </RadioButton>
             <RadioButton Name="NavFastboot" Tag="Fastboot" GroupName="Navigation" Style="{StaticResource Nav}" AutomationProperties.Name="{DynamicResource Fastboot}" Checked="Navigate">
               <StackPanel Orientation="Horizontal">
                 <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0" Text="" />
@@ -76,28 +82,7 @@
         <Border Name="MirrorPane" Grid.Row="1" Grid.Column="1" Visibility="Collapsed" Margin="0,36,8,12" Background="#12232F" CornerRadius="6" Padding="1">
           <DockPanel>
             <DockPanel Dock="Top" Margin="0,1,0,2">
-              <ToggleButton Name="StayAwake" DockPanel.Dock="Right" Margin="0,0,2,0" ToolTip="{DynamicResource StayAwakeHint}" AutomationProperties.Name="{DynamicResource StayAwake}" Click="StayAwakeClick">
-                <Control.Template>
-                  <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border Name="SwitchBody" Padding="6,4" BorderThickness="1" BorderBrush="#00FFFFFF" CornerRadius="5" Background="#203A49">
-                      <DockPanel>
-                        <Border Name="Track" DockPanel.Dock="Right" Width="29" Height="16" CornerRadius="8" Background="#617684" VerticalAlignment="Center">
-                          <Ellipse Name="Thumb" Width="12" Height="12" Margin="2" Fill="#FFFFFFFF" HorizontalAlignment="Left" />
-                        </Border>
-                      </DockPanel>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                      <Trigger Property="ToggleButton.IsChecked" Value="True">
-                        <Setter TargetName="Track" Property="Border.Background" Value="#12847C" />
-                        <Setter TargetName="Thumb" Property="FrameworkElement.HorizontalAlignment" Value="Right" />
-                      </Trigger>
-                      <Trigger Property="UIElement.IsKeyboardFocused" Value="True">
-                        <Setter TargetName="SwitchBody" Property="Border.BorderBrush" Value="#FFFFFFFF" />
-                      </Trigger>
-                    </ControlTemplate.Triggers>
-                  </ControlTemplate>
-                </Control.Template>
-              </ToggleButton>
+
               <TextBlock Name="MirrorTitle" VerticalAlignment="Center" Margin="6,0,2,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" FontSize="12" Foreground="#FFFFFFFF" />
             </DockPanel>
             <Border DockPanel.Dock="Top" Background="#203A49" CornerRadius="4" Margin="0,0,0,3">
@@ -191,6 +176,7 @@
                       <TextBlock FontSize="11" Foreground="#526577" Text="192.168.1.20:40567" />
                     </StackPanel>
                     <TextBlock Name="WifiStatus" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" />
+                    <ProgressBar Name="WifiProgress" Height="4" IsIndeterminate="True" Foreground="#126782" Background="#DFEBEF" BorderThickness="0" Margin="0,8,0,0" Visibility="Collapsed"/>
                   </StackPanel>
                 </Border>
               </Popup>
@@ -203,15 +189,15 @@
 <Border Background="#142733" CornerRadius="9" Padding="12" Margin="0,4,0,0">
                 <DockPanel>
                   <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                    <Button DockPanel.Dock="Right" Content="{DynamicResource ClearLog}" Click="ClearConsole" Padding="8,2"/>
-                    <Button Name="StopCommand" DockPanel.Dock="Right" Margin="0,0,5,0" Content="{DynamicResource Cancel}" Click="StopConsole" Padding="8,2"/>
+                    <Button DockPanel.Dock="Right"  Click="ClearConsole" Padding="8,2" AutomationProperties.Name="{DynamicResource ClearLog}" Background="#EAF0F4" Foreground="#334E60" BorderBrush="#CAD8E0"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE75C;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource ClearLog}" VerticalAlignment="Center"/></StackPanel></Button>
+                    <Button Name="StopCommand" DockPanel.Dock="Right" Margin="0,0,5,0"  Click="StopConsole" Padding="8,2" AutomationProperties.Name="{DynamicResource Cancel}" Background="#FBECEF" Foreground="#9B3545" BorderBrush="#EAC8CE"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource Cancel}" VerticalAlignment="Center"/></StackPanel></Button>
                     <TextBlock Text="{DynamicResource Console}" VerticalAlignment="Center" Foreground="#AAC6CF" FontWeight="SemiBold"/>
                   </DockPanel>
                   <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
                     <TextBlock Text="adb ›" Foreground="#82DBC5" VerticalAlignment="Center" FontFamily="Consolas" Margin="0,0,8,0"/>
-                    <TextBox Name="AdbCommand" KeyDown="ConsoleKey" AutomationProperties.Name="adb" FontFamily="Consolas" Style="{x:Null}" Background="Transparent" Foreground="White" CaretBrush="White" BorderThickness="0" Padding="0,3"/>
+                    <TextBox Name="AdbCommand" KeyDown="ConsoleKey" AutomationProperties.Name="adb" FontFamily="Consolas" Style="{x:Null}" Background="Transparent" Foreground="White" CaretBrush="White" BorderThickness="0" Padding="0,3" TextWrapping="Wrap" HorizontalScrollBarVisibility="Disabled"/>
                   </DockPanel>
-                  <TextBox Name="ConsoleOutput"  TextChanged="ScrollConsole" IsVisibleChanged="ShowConsoleTail" Style="{x:Null}" Background="Transparent" Foreground="#DCE9EE" BorderThickness="0" FontFamily="Consolas" IsReadOnly="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+                  <TextBox Name="ConsoleOutput"  TextChanged="ScrollConsole" IsVisibleChanged="ShowConsoleTail" Style="{StaticResource ConsoleOutputStyle}"/>
                 </DockPanel>
               </Border>
             </DockPanel>
@@ -241,6 +227,29 @@
                               <TextBlock Text="{DynamicResource ShutdownPhoneShort}" />
                             </StackPanel>
                           </Button>
+              <ToggleButton Name="StayAwake" Margin="4,0,0,0" Height="26" ToolTip="{DynamicResource StayAwakeHint}" AutomationProperties.Name="{DynamicResource StayAwake}" Click="StayAwakeClick">
+                <Control.Template>
+                  <ControlTemplate TargetType="{x:Type ToggleButton}">
+                    <Border Name="SwitchBody" Padding="8,3" BorderThickness="1" BorderBrush="#BFD6DD" CornerRadius="5" Background="#F4FAFB">
+                      <DockPanel>
+                        <Border Name="Track" DockPanel.Dock="Right" Width="29" Height="16" CornerRadius="8" Background="#889DA7" VerticalAlignment="Center">
+                          <Ellipse Name="Thumb" Width="12" Height="12" Margin="2" Fill="#FFFFFFFF" HorizontalAlignment="Left" />
+                        </Border>
+                        <TextBlock Text="{DynamicResource StayAwake}" Foreground="#236579" FontSize="12" Margin="0,0,8,0"/>
+                      </DockPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                      <Trigger Property="ToggleButton.IsChecked" Value="True">
+                        <Setter TargetName="Track" Property="Border.Background" Value="#12847C" />
+                        <Setter TargetName="Thumb" Property="FrameworkElement.HorizontalAlignment" Value="Right" />
+                      </Trigger>
+                      <Trigger Property="UIElement.IsKeyboardFocused" Value="True">
+                        <Setter TargetName="SwitchBody" Property="Border.BorderBrush" Value="#126782" />
+                      </Trigger>
+                    </ControlTemplate.Triggers>
+                  </ControlTemplate>
+                </Control.Template>
+              </ToggleButton>
                         </WrapPanel>
                       </StackPanel>
                       <Viewbox Name="PhoneOutline" Grid.Column="1" Width="54" Height="64" IsHitTestVisible="False">
@@ -278,6 +287,7 @@
                               <StackPanel Grid.Column="1">
                                 <TextBlock Foreground="#466271" FontSize="12" TextWrapping="Wrap" Text="{Binding Label}" />
                                 <TextBlock Foreground="#152E3E" FontWeight="SemiBold" FontSize="16" TextWrapping="Wrap" Text="{Binding Value}" />
+                                <TextBlock Foreground="#306B99" FontSize="12" TextWrapping="Wrap" Text="{Binding Secondary}" Visibility="{Binding SecondaryVisibility}" Margin="0,3,0,0"/>
                                 <ProgressBar Maximum="100" Height="5" Margin="0,5,0,1" AutomationProperties.Name="{Binding Label}" Value="{Binding Level, Mode=OneWay}" Visibility="{Binding MeterVisibility}">
                                   <Control.Template>
                                     <ControlTemplate TargetType="{x:Type ProgressBar}">
@@ -290,6 +300,12 @@
                                 </ProgressBar>
                               </StackPanel>
                               <Button Grid.Column="2" VerticalAlignment="Top" Width="23" Height="23" Margin="4,0,0,0" Content="ⓘ" FontSize="17" FontFamily="Segoe UI Symbol" Background="#00FFFFFF" BorderThickness="0" AutomationProperties.AutomationId="BatteryInfo" AutomationProperties.Name="{DynamicResource BatteryHealth}" Style="{x:Null}" Visibility="{Binding HintVisibility}" Foreground="{Binding Accent}" Tag="{Binding Hint}" Click="BatteryInfoClick" />
+                              <Button Grid.Column="2" Width="27" Height="27" MinHeight="0" Padding="4" VerticalAlignment="Top" Margin="5,0,0,0"
+                                      Background="#F0ECF8" Foreground="#67539B" BorderBrush="#D6CCE9" Click="CleanRamClick"
+                                      Visibility="{Binding RamCleanVisibility}" IsEnabled="{Binding RamCleanEnabled}"
+                                      ToolTip="{DynamicResource CleanRam}" AutomationProperties.Name="{DynamicResource CleanRam}">
+                                <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                              </Button>
                             </Grid>
                           </Border>
                         </DataTemplate>
@@ -301,7 +317,18 @@
                   <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
                     <StackPanel>
                       <StackPanel Margin="0,0,0,6" ToolTip="{DynamicResource AppScope}">
-                        <TextBlock Text="{DynamicResource AppOverview}" FontSize="12" FontWeight="SemiBold" />
+                        <DockPanel LastChildFill="True">
+                          <Border DockPanel.Dock="Right" Background="#EAF3FA" CornerRadius="7" Padding="10,6" Margin="12,0,0,0">
+                            <StackPanel Orientation="Horizontal">
+                              <TextBlock Text="&#xEDA2;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#306B99" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                              <StackPanel>
+                                <TextBlock Text="{DynamicResource StorageRemaining}" FontSize="11" Foreground="#466271"/>
+                                <TextBlock Name="AppStorageRemaining" FontSize="14" FontWeight="SemiBold" Foreground="#152E3E" AutomationProperties.Name="{DynamicResource StorageRemaining}"/>
+                              </StackPanel>
+                            </StackPanel>
+                          </Border>
+                          <TextBlock Text="{DynamicResource AppOverview}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </DockPanel>
                         <ItemsControl Name="AppSummary" Margin="0,8,0,4">
                           <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -321,6 +348,36 @@
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
                       </StackPanel>
+                      <Border HorizontalAlignment="Left" Background="#EDF3F6" CornerRadius="8" Padding="3" Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal">
+                          <RadioButton Name="AllAppsTab" GroupName="InventoryTabs" Style="{StaticResource InventoryTab}" Content="{DynamicResource AllApps}" IsChecked="True" Checked="InventoryTabChanged"/>
+                          <RadioButton Name="RunningAppsTab" GroupName="InventoryTabs" Style="{StaticResource InventoryTab}" Content="{DynamicResource RunningApps}" Checked="InventoryTabChanged"/>
+                        </StackPanel>
+                      </Border>
+                      <ProgressBar Name="InventoryProgress" Height="4" IsIndeterminate="True" Foreground="#126782" Background="#DFEBEF" BorderThickness="0" Margin="0,0,0,10" Visibility="Collapsed"/>
+                      <Border Name="RunningRamCard" Visibility="Collapsed" Background="#F7F5FC" BorderBrush="#DDD6EE" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,12">
+                        <Grid>
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                          <Border Width="36" Height="36" CornerRadius="9" Background="#ECE7F8" Margin="0,0,12,0" VerticalAlignment="Center">
+                            <Path Data="M4,7 H20 V16 H4 Z M7,10 V13 M11,10 V13 M15,10 V13 M7,16 V19 M11,16 V19 M15,16 V19" Width="20" Height="20" Stretch="Uniform" Stroke="#6353A6" StrokeThickness="1.7" StrokeLineJoin="Round"/>
+                          </Border>
+                          <StackPanel Grid.Column="1">
+                            <TextBlock Text="{DynamicResource Ram}" FontSize="12" Foreground="#60547E"/>
+                            <DockPanel Margin="0,3,0,0">
+                              <TextBlock Name="RunningRamPercent" DockPanel.Dock="Right" Foreground="#6353A6" FontWeight="SemiBold" FontSize="13" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                              <TextBlock Name="RunningRamValue" Foreground="#152E3E" FontSize="16" FontWeight="SemiBold"/>
+                            </DockPanel>
+                            <ProgressBar Name="RunningRamProgress" Maximum="100" Height="6" Margin="0,7,0,0" AutomationProperties.Name="{DynamicResource Ram}">
+                              <ProgressBar.Template><ControlTemplate TargetType="ProgressBar">
+                                <Grid><Border Name="PART_Track" CornerRadius="3" Background="#E5DFF2"/><Border Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="3" Background="#6353A6"/></Grid>
+                              </ControlTemplate></ProgressBar.Template>
+                            </ProgressBar>
+                          </StackPanel>
+                          <Button Name="ApplicationCleanRam" Grid.Column="2" Click="CleanRamClick" Margin="18,0,0,0" VerticalAlignment="Center" Background="#ECE7F8" Foreground="#67539B" BorderBrush="#D6CCE9" AutomationProperties.Name="{DynamicResource CleanRam}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" Margin="0,0,7,0"/><TextBlock Text="{DynamicResource CleanRam}"/></StackPanel>
+                          </Button>
+                        </Grid>
+                      </Border>
                       <DockPanel Margin="0,0,0,8">
                         <ComboBox Name="InventorySort" Width="145" Margin="6,0,0,0" DockPanel.Dock="Right" SelectedIndex="0" AutomationProperties.Name="{DynamicResource SortApps}" ToolTip="{DynamicResource SortApps}" SelectionChanged="InventoryFilterChanged">
                           <ComboBoxItem Content="{DynamicResource SortAZ}" />
@@ -387,28 +444,53 @@
                         </Grid>
                       </Border>
                       <WrapPanel Margin="0,0,0,8">
-                        <Button Name="InstallApk" Style="{StaticResource Primary}" Content="{DynamicResource Install}" Tag="Install" Margin="0,0,8,4" Click="BatchClick" />
-                        <Button Name="RestoreApps" Content="{DynamicResource RestoreBackup}" Tag="RestoreBackup" Margin="0,0,6,4" Click="BatchClick" />
-                        <Button Name="BatchCache" Content="{DynamicResource ClearCache}" Tag="ClearCache" Margin="0,0,6,4" Click="BatchClick" />
-                        <Button Name="BatchDisable" Content="{DynamicResource Disable}" Tag="Disable" Margin="0,0,6,4" Click="BatchClick" />
-                        <Button Name="BatchEnable" Content="{DynamicResource Enable}" Tag="Enable" Margin="0,0,6,4" Click="BatchClick" />
-                        <Button Name="BatchUninstall" Content="{DynamicResource Uninstall}" Tag="Uninstall" Margin="0,0,6,4" Click="BatchClick" />
+                        <Button Name="RefreshApplications" Click="RefreshApplicationsClick" Margin="0,0,6,4" AutomationProperties.Name="{DynamicResource RefreshApplications}">
+                          <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" Margin="0,0,7,0"/><TextBlock Text="{DynamicResource RefreshApplications}"/></StackPanel>
+                        </Button>
+                        <Button Name="BatchReleaseMemory" Tag="ReleaseMemory" Content="{DynamicResource ReleaseMemory}" Margin="0,0,6,4" Click="BatchClick" Visibility="Collapsed"/>
+                        <Button Name="InstallApk" Style="{StaticResource Primary}"  Tag="Install" Margin="0,0,8,4" Click="BatchClick"  AutomationProperties.Name="{DynamicResource Install}" Background="#126782" Foreground="#FFFFFF" BorderBrush="#126782"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE898;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource Install}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Name="RestoreApps"  Tag="RestoreBackup" Margin="0,0,6,4" Click="BatchClick"  AutomationProperties.Name="{DynamicResource RestoreBackup}" Background="#E7F3EC" Foreground="#276A50" BorderBrush="#BFDDCC"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE777;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource RestoreBackup}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Name="BatchCache"  Tag="ClearCache" Margin="0,0,6,4" Click="BatchClick"  AutomationProperties.Name="{DynamicResource ClearCache}" Background="#F0ECF8" Foreground="#67539B" BorderBrush="#D6CCE9"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE75C;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource ClearCache}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Name="BatchDisable"  Tag="Disable" Margin="0,0,6,4" Click="BatchClick"  AutomationProperties.Name="{DynamicResource Disable}" Background="#FFF2DE" Foreground="#875416" BorderBrush="#E9D1A8"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE769;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource Disable}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Name="BatchEnable"  Tag="Enable" Margin="0,0,6,4" Click="BatchClick"  AutomationProperties.Name="{DynamicResource Enable}" Background="#E7F3EC" Foreground="#276A50" BorderBrush="#BFDDCC"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE768;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource Enable}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Name="BatchUninstall" Background="#B52E3C" BorderBrush="#B52E3C" Foreground="White" AutomationProperties.Name="{DynamicResource Uninstall}" Tag="Uninstall" Margin="0,0,6,4" Click="BatchClick">
+                          <StackPanel Orientation="Horizontal">
+                            <Path Data="M4,6 H20 M9,6 V3 H15 V6 M6,6 L7,21 H17 L18,6 M10,10 V17 M14,10 V17" Stroke="White" StrokeThickness="1.7" Width="14" Height="16" Stretch="Uniform" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Uninstall}"/>
+                          </StackPanel>
+                        </Button>
                         <TextBlock Name="BatchCount" VerticalAlignment="Center" Margin="6,0" />
                       </WrapPanel>
-                      <TextBlock Name="BatchStatus" TextWrapping="Wrap" Foreground="#24596C" />
+                      <Border Name="BatchProgressCard" Visibility="Collapsed" Background="#E8F3F5" BorderBrush="#C7DFE5" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                        <StackPanel>
+                          <DockPanel>
+                            <TextBlock Name="BatchProgressCount" DockPanel.Dock="Right" FontWeight="SemiBold" Foreground="#126782"/>
+                            <TextBlock Name="BatchStage" FontWeight="SemiBold" Foreground="#24596C"/>
+                          </DockPanel>
+                          <TextBlock Name="BatchCurrentApp" TextTrimming="CharacterEllipsis" Foreground="#526577" Margin="0,4,0,8"/>
+                          <ProgressBar Name="BatchProgress" Height="6" Foreground="#126782" Background="#D1E5EA" BorderThickness="0"/>
+                        </StackPanel>
+                      </Border>
+                      <TextBlock Name="BatchStatus" TextWrapping="Wrap" Foreground="#24596C" Margin="0,0,0,5" />
+                      <Button Name="CacheSettings" Visibility="Collapsed" Content="{DynamicResource OpenAppSettings}" Click="OpenCacheSettings" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                      <TextBox Name="BatchResults" Visibility="Collapsed" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="110" VerticalScrollBarVisibility="Auto" BorderThickness="0" Background="Transparent" Foreground="#526577" FontSize="12" Margin="0,0,0,8"/>
+
                       <Border Background="#E9F2F4" Padding="10,6,24,6" CornerRadius="4">
                         <DockPanel TextElement.FontWeight="SemiBold">
-                          <TextBlock DockPanel.Dock="Right" Width="76" Margin="4,0" TextAlignment="Right" Text="{DynamicResource CacheSize}"/>
-                          <TextBlock DockPanel.Dock="Right" Width="82" Margin="4,0" TextAlignment="Right" Text="{DynamicResource InventorySize}" />
-                          <TextBlock DockPanel.Dock="Right" Width="126" Margin="12,0" Text="{DynamicResource InventoryRisk}" />
-                          <TextBlock Margin="68,0,0,0" Text="{DynamicResource InventoryName}" />
+                          <CheckBox Name="InventoryCheckAll" DockPanel.Dock="Left" Style="{StaticResource InventoryCheckbox}"
+                                    IsThreeState="True" VerticalAlignment="Center" Margin="0,0,8,0"
+                                    Click="InventoryCheckAllClick" ToolTip="{DynamicResource CheckAll}" AutomationProperties.Name="{DynamicResource CheckAll}"/>
+                          <Button DockPanel.Dock="Right" Width="76" Margin="4,0" Name="SortHeaderCache" Tag="Cache" Content="{DynamicResource CacheSize}" Click="InventoryHeaderClick" Cursor="Hand" Style="{x:Null}" Background="Transparent" BorderThickness="0" Padding="0,3" HorizontalContentAlignment="Right"/>
+                          <Button DockPanel.Dock="Right" Width="82" Margin="4,0" Name="SortHeaderSize" Tag="Size" Content="{DynamicResource InventorySize}" Click="InventoryHeaderClick" Cursor="Hand" Style="{x:Null}" Background="Transparent" BorderThickness="0" Padding="0,3" HorizontalContentAlignment="Right"/>
+                          <Button DockPanel.Dock="Right" Width="126" Margin="12,0" Name="SortHeaderRisk" Tag="Risk" Content="{DynamicResource InventoryRisk}" Click="InventoryHeaderClick" Cursor="Hand" Style="{x:Null}" Background="Transparent" BorderThickness="0" Padding="0,3" HorizontalContentAlignment="Left"/>
+                          <Button Margin="40,0,0,0" Name="SortHeaderName" Tag="Name" Content="{DynamicResource InventoryName}" Click="InventoryHeaderClick" Cursor="Hand" Style="{x:Null}" Background="Transparent" BorderThickness="0" Padding="0,3" HorizontalContentAlignment="Left"/>
                         </DockPanel>
                       </Border>
                       <ListBox Name="InventoryList" HorizontalContentAlignment="Stretch" Height="300" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.VirtualizationMode="Recycling" LayoutUpdated="FitAppList">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate>
                             <DockPanel Margin="4,3" Background="#00FFFFFF" MouseLeftButtonUp="InventoryRowClick">
-                              <CheckBox VerticalAlignment="Center" Margin="0,0,10,0" IsChecked="{Binding Checked, Mode=TwoWay}" AutomationProperties.Name="{Binding Entry.Name}" Click="InventoryChecked" />
+                              <CheckBox Style="{StaticResource InventoryCheckbox}" VerticalAlignment="Center" Margin="0,0,10,0" IsChecked="{Binding Checked, Mode=TwoWay}" IsEnabled="{Binding SelectionEnabled}" AutomationProperties.Name="{Binding Entry.Name}" Click="InventoryChecked" />
                               <Image Width="32" Height="32" Margin="0,0,10,0" Source="{Binding Image}" />
                               <TextBlock DockPanel.Dock="Right" Width="76" Margin="4,0" TextAlignment="Right" VerticalAlignment="Center" Text="{Binding Cache}"/>
                               <TextBlock DockPanel.Dock="Right" Width="82" TextAlignment="Right" VerticalAlignment="Center" Margin="4,0" Text="{Binding Size}" />
@@ -441,11 +523,287 @@
                               <StackPanel>
                                 <TextBlock FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Entry.Name}" />
                                 <TextBlock Style="{StaticResource Body}" TextTrimming="CharacterEllipsis" Text="{Binding Entry.Package}" ToolTip="{Binding Entry.Package}" />
+                                <WrapPanel Margin="0,3,0,1">
+                                  <Border CornerRadius="4" Padding="5,1" Margin="0,0,5,0" Background="#EAF3FA" Visibility="{Binding RunningVisibility}">
+                                    <TextBlock FontSize="10" Foreground="#306B99">
+                                      <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                          <Setter Property="Text" Value="{DynamicResource RamProtectedBadge}"/>
+                                          <Style.Triggers><DataTrigger Binding="{Binding CanReleaseMemory}" Value="True"><Setter Property="Text" Value="{DynamicResource RamCachedBadge}"/></DataTrigger></Style.Triggers>
+                                        </Style>
+                                      </TextBlock.Style>
+                                    </TextBlock>
+                                  </Border>
+                                  <Border CornerRadius="4" Padding="5,1" Margin="0,0,5,0">
+                                    <Border.Style>
+                                      <Style TargetType="Border">
+                                        <Setter Property="Background" Value="#E8F3F0"/>
+                                        <Style.Triggers><DataTrigger Binding="{Binding Entry.System}" Value="True"><Setter Property="Background" Value="#EBEFFB"/></DataTrigger></Style.Triggers>
+                                      </Style>
+                                    </Border.Style>
+                                    <TextBlock FontSize="10" FontWeight="SemiBold">
+                                      <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                          <Setter Property="Text" Value="{DynamicResource BadgeUser}"/>
+                                          <Setter Property="Foreground" Value="#286653"/>
+                                          <Style.Triggers><DataTrigger Binding="{Binding Entry.System}" Value="True"><Setter Property="Text" Value="{DynamicResource BadgeSystem}"/><Setter Property="Foreground" Value="#4E5892"/></DataTrigger></Style.Triggers>
+                                        </Style>
+                                      </TextBlock.Style>
+                                    </TextBlock>
+                                  </Border>
+                                  <Border CornerRadius="4" Padding="5,1" Background="#FFF0D8" Margin="0,0,5,0">
+                                    <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><MultiDataTrigger><MultiDataTrigger.Conditions><Condition Binding="{Binding Entry.Enabled}" Value="False"/><Condition Binding="{Binding Entry.Installed}" Value="True"/></MultiDataTrigger.Conditions><Setter Property="Visibility" Value="Visible"/></MultiDataTrigger></Style.Triggers></Style></Border.Style>
+                                    <TextBlock Text="{DynamicResource BadgeDisabled}" Foreground="#855009" FontSize="10" FontWeight="SemiBold"/>
+                                  </Border>
+                                  <Border CornerRadius="4" Padding="5,1" Background="#FBE7EB">
+                                    <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Entry.Installed}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                                    <TextBlock Text="{DynamicResource BadgeRemoved}" Foreground="#99384F" FontSize="10" FontWeight="SemiBold"/>
+                                  </Border>
+                                </WrapPanel>
                               </StackPanel>
                             </DockPanel>
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ListBox>
+                    </StackPanel>
+                  </Border>
+                </StackPanel>
+                <StackPanel Name="RootingPage" Visibility="Collapsed">
+                  <WrapPanel Margin="0,0,0,8">
+                    <Border Background="#E2F0F4" CornerRadius="6" Padding="9,5" Margin="0,0,7,3"><TextBlock Name="RootDeviceStatus" Foreground="#236579" FontWeight="SemiBold"/></Border>
+                    <Border Background="#E9F3EE" CornerRadius="6" Padding="9,5" Margin="0,0,0,3"><TextBlock Name="RootEngineStatus" Foreground="#276A50"/></Border>
+                  </WrapPanel>
+                  <TextBlock Name="RootModuleAvailability" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                  <WrapPanel Name="RootAccessActions" Visibility="Collapsed" Margin="0,0,0,8">
+                    <Button Name="RootManagerOpen" Content="{DynamicResource ModuleOpenManager}" Click="RootManagerOpenClick" Margin="0,0,7,0"/>
+                    <Button Name="RootAccessCheck" Content="{DynamicResource ModuleCheckAccess}" Click="RootAccessCheckClick"/>
+                  </WrapPanel>
+                  <Border Background="#E2ECF0" CornerRadius="8" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,10">
+                    <StackPanel Orientation="Horizontal">
+                      <RadioButton Name="RootWorkspaceRoot" GroupName="RootWorkspaceTabs" IsChecked="True" Content="{DynamicResource RootTab}" Style="{StaticResource InventoryTab}" Checked="RootWorkspaceTabChanged"/>
+                      <RadioButton Name="RootWorkspaceModules" GroupName="RootWorkspaceTabs" Content="{DynamicResource RootModulesTab}" Style="{StaticResource InventoryTab}" Checked="RootWorkspaceTabChanged"/>
+                    </StackPanel>
+                  </Border>
+                  <Border Name="RootInstallCard" Padding="16,12">
+                    <Border.Style><Style TargetType="Border" BasedOn="{StaticResource Panel}">
+                      <Setter Property="Visibility" Value="Collapsed"/>
+                      <Style.Triggers><DataTrigger Binding="{Binding IsChecked, ElementName=RootWorkspaceRoot}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                    </Style></Border.Style>
+                    <StackPanel>
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Border Width="58" Height="58" CornerRadius="14" Background="#E5F6F1" Margin="0,0,12,0">
+                          <Image Source="{StaticResource MagiskIcon}" Width="44" Height="44"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                          <TextBlock Text="Magisk" FontSize="23" FontWeight="SemiBold"/>
+                          <TextBlock Text="topjohnwu / Magisk" FontSize="12" Foreground="#6C8290" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                          <Button Click="RootLatestClick" ToolTip="{DynamicResource RootLatest}" AutomationProperties.Name="{DynamicResource RootLatest}" Padding="8,5" Margin="0,0,5,0" Background="#F4F8FA">
+                            <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                          </Button>
+                          <Button Click="RootInfoClick" ToolTip="{DynamicResource Information}" AutomationProperties.Name="{DynamicResource Information}" Padding="8,5" Background="#F4F8FA">
+                            <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                          </Button>
+                        </StackPanel>
+                      </Grid>
+                      <Border Background="#F0F5F7" CornerRadius="6" Padding="9,5" Margin="0,12,0,10" HorizontalAlignment="Left">
+                        <TextBlock Name="RootDaemonStatus" FontSize="12" Foreground="#526878"/>
+                      </Border>
+                      <WrapPanel Margin="0,0,0,10">
+                        <Border Background="#F4F8FA" CornerRadius="8" Padding="12,8" Margin="0,0,8,5" MinWidth="150">
+                          <StackPanel>
+                            <TextBlock Text="{DynamicResource RootInstalledLabel}" FontSize="12" Foreground="#526878"/>
+                            <TextBlock Name="RootInstalledVersion" FontSize="17" FontWeight="SemiBold" Margin="0,3,0,0"/>
+                          </StackPanel>
+                        </Border>
+                        <Border Background="#F4F8FA" CornerRadius="8" Padding="12,8" Margin="0,0,8,5" MinWidth="130">
+                          <StackPanel>
+                            <TextBlock Text="{DynamicResource RootLatestLabel}" FontSize="12" Foreground="#526878"/>
+                            <TextBlock Name="RootLatestVersion" FontSize="17" FontWeight="SemiBold" Margin="0,3,0,0"/>
+                          </StackPanel>
+                        </Border>
+                        <Border Name="RootUpdateBadge" CornerRadius="6" Padding="10,6" VerticalAlignment="Center" Margin="0,0,0,5">
+                          <TextBlock Name="RootUpdateStatus" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        </Border>
+                      </WrapPanel>
+                      <WrapPanel>
+                        <Button Name="RootApkInstall" Click="RootApkInstallClick" Background="#126782" BorderBrush="#126782" Foreground="White" Margin="0,0,7,5" Padding="14,8" AutomationProperties.Name="{DynamicResource RootApkInstall}">
+                          <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,8,0"/>
+                            <TextBlock Name="RootApkAction" Text="{DynamicResource RootInstallApkShort}"/>
+                          </StackPanel>
+                        </Button>
+                        <Button Name="RootDownload" Click="RootDownloadClick" Margin="0,0,7,5" Padding="14,8" AutomationProperties.Name="{DynamicResource RootDownload}">
+                          <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,8,0"/>
+                            <TextBlock Text="{DynamicResource RootDownloadShort}"/>
+                          </StackPanel>
+                        </Button>
+                        <Button Content="{DynamicResource RootGuideShort}" Tag="https://topjohnwu.github.io/Magisk/install.html" Click="RootLinkClick" Background="#F4F8FA" Margin="0,0,0,5" Padding="12,8"/>
+                      </WrapPanel>
+                      <TextBlock Name="RootReleaseStatus" TextWrapping="Wrap" FontSize="12" Foreground="#6C8290" Margin="0,4,0,0"/>
+                      <Border Background="#EDF5F6" CornerRadius="7" Padding="10" Margin="0,10,0,0">
+                        <StackPanel>
+                          <Border Name="RootMethodTabs" Background="#E2ECF0" CornerRadius="8" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,10">
+                            <StackPanel Orientation="Horizontal">
+                              <RadioButton Name="RootSideloadMethod" GroupName="RootInstallMethod" Style="{StaticResource InventoryTab}" Content="{DynamicResource RootSideloadMethod}" IsChecked="True" Checked="RootInstallMethodChanged"/>
+                              <RadioButton Name="RootStorageMethod" GroupName="RootInstallMethod" Style="{StaticResource InventoryTab}" Content="{DynamicResource RootStorageMethod}" Checked="RootInstallMethodChanged"/>
+                            </StackPanel>
+                          </Border>
+                          <WrapPanel Name="RootSideloadPanel">
+                            <Button Name="RootInstall" Style="{StaticResource Primary}" Click="RootInstallClick" Margin="0,0,14,4" AutomationProperties.Name="{DynamicResource RootFlashMagisk}">
+                              <StackPanel Orientation="Horizontal"><TextBlock Name="RootActionIcon" Text="&#xE945;" FontFamily="Segoe MDL2 Assets" Margin="0,0,7,0"/><TextBlock Name="RootActionText" Text="{DynamicResource RootFlashMagisk}"/></StackPanel>
+                            </Button>
+                            <Border Background="#E2ECF0" CornerRadius="6" Padding="10,7" Margin="0,0,0,4">
+                              <TextBlock Name="RootActionSteps" Text="{DynamicResource RootAutoSteps}" Foreground="#466271" FontWeight="SemiBold"/>
+                            </Border>
+                          </WrapPanel>
+                          <TextBlock Name="RootAutoStatus" TextWrapping="Wrap" FontSize="12" Foreground="#24596C" Margin="0,5,0,4"/>
+                          <StackPanel Name="RootTransferPanel" Visibility="Collapsed">
+                            <TextBlock Text="{DynamicResource RootTransferHint}" FontSize="12" Foreground="#466271" TextWrapping="Wrap" Margin="0,0,0,9"/>
+                            <Button Name="RootTransferAndroid" Content="{DynamicResource RootTransferAndroid}" Tag="System" Click="ActionClick" HorizontalAlignment="Left" Margin="0,0,0,9" Visibility="Collapsed"/>
+                            <WrapPanel>
+                              <Button Name="RootTransferPackage" Content="{DynamicResource RootTransferPackage}" Style="{StaticResource Primary}" Click="RootTransferClick" Margin="0,0,0,4"/>
+                              <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="→" FontSize="20" Foreground="#527889" Margin="8,0,8,4" VerticalAlignment="Center"/>
+                                <Button Name="RootTransferRecovery" Content="{DynamicResource RootTransferRecovery}" Tag="Recovery" Click="ActionClick" Margin="0,0,0,4"/>
+                              </StackPanel>
+                              <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="→" FontSize="20" Foreground="#527889" Margin="8,0,8,4" VerticalAlignment="Center"/>
+                                <Border Background="#E2ECF0" CornerRadius="6" Padding="10,7" Margin="0,0,0,4">
+                                  <TextBlock Text="{DynamicResource RootFlashManual}" Foreground="#466271" FontWeight="SemiBold"/>
+                                </Border>
+                              </StackPanel>
+                            </WrapPanel>
+                            <TextBlock Name="RootTransferStatus" FontSize="12" Foreground="#24596C" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                          </StackPanel>
+                      <TextBlock Name="RootRecoveryStatus" FontSize="12" Foreground="#326477" Margin="0,6,0,0"/>
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                  </Border>
+                  <Border Name="RootConsole" Background="#142733" CornerRadius="9" Padding="12" Margin="0,8,0,0">
+                    <Border.Style><Style TargetType="Border">
+                      <Setter Property="Visibility" Value="Collapsed"/>
+                      <Style.Triggers><DataTrigger Binding="{Binding IsChecked, ElementName=RootWorkspaceRoot}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                    </Style></Border.Style>
+                    <DockPanel>
+                      <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Button DockPanel.Dock="Right" Click="ClearConsole" Padding="8,2" Background="#EAF0F4" Foreground="#334E60" BorderBrush="#CAD8E0" AutomationProperties.Name="{DynamicResource ClearLog}"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE75C;" FontSize="14" Margin="0,0,7,0"/><TextBlock Text="{DynamicResource ClearLog}"/></StackPanel></Button>
+                        <Button IsEnabled="{Binding IsEnabled, ElementName=StopCommand}" DockPanel.Dock="Right" Margin="0,0,5,0" Click="StopConsole" Padding="8,2" Background="#FBECEF" Foreground="#9B3545" BorderBrush="#EAC8CE" AutomationProperties.Name="{DynamicResource Cancel}"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;" FontSize="14" Margin="0,0,7,0"/><TextBlock Text="{DynamicResource Cancel}"/></StackPanel></Button>
+                        <TextBlock Text="{DynamicResource RootConsole}" Foreground="#AAC6CF" FontWeight="SemiBold"/>
+                      </DockPanel>
+                      <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+                        <TextBlock Text="adb ›" Foreground="#82DBC5" FontFamily="Consolas" Margin="0,0,8,0"/>
+                        <TextBox Name="RootInput" KeyDown="ConsoleKey" AutomationProperties.Name="adb" FontFamily="Consolas" Style="{x:Null}" Background="Transparent" Foreground="White" CaretBrush="White" BorderThickness="0" Padding="0,3" TextWrapping="Wrap" HorizontalScrollBarVisibility="Disabled"/>
+                      </DockPanel>
+                      <TextBox Name="RootOutput" LayoutUpdated="FitModeConsole" Text="{Binding Text, ElementName=ConsoleOutput, Mode=OneWay}" Height="145" TextChanged="ScrollConsole" IsVisibleChanged="ShowConsoleTail" Style="{StaticResource ConsoleOutputStyle}"/>
+                    </DockPanel>
+                  </Border>
+                  <Border Name="RootModulesCard" Padding="16,12">
+                    <Border.Style><Style TargetType="Border" BasedOn="{StaticResource Panel}">
+                      <Setter Property="Visibility" Value="Collapsed"/>
+                      <Style.Triggers><DataTrigger Binding="{Binding IsChecked, ElementName=RootWorkspaceModules}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                    </Style></Border.Style>
+                    <StackPanel>
+                      <DockPanel Margin="0,0,0,4">
+                        <Button Name="RootLocalInstall" DockPanel.Dock="Right" Click="RootLocalInstallClick" Margin="7,0,0,0"
+                                ToolTip="{Binding Text, ElementName=RootModuleAvailability}" ToolTipService.ShowOnDisabled="True"
+                                AutomationProperties.Name="{DynamicResource ModuleInstallFile}" Background="#E7F3EC" Foreground="#276A50" BorderBrush="#BFDDCC">
+                          <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" Margin="0,0,7,0"/><TextBlock Text="{DynamicResource ModuleInstallFile}"/></StackPanel>
+                        </Button>
+                        <Button Name="RootCatalogRefresh" DockPanel.Dock="Right" Click="RootCatalogRefreshClick"
+                                ToolTip="{DynamicResource RootCatalogRefreshHint}" AutomationProperties.Name="{DynamicResource RootCatalogSync}"
+                                Width="32" Height="32" Padding="6" Background="#F4F8FA">
+                          <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="16"/>
+                        </Button>
+                        <TextBlock Text="{DynamicResource RootModules}" Style="{StaticResource Section}" VerticalAlignment="Center"/>
+                      </DockPanel>
+
+                      <WrapPanel Margin="0,7,0,0">
+                        <RadioButton Name="RootHighlightsTab" GroupName="RootModuleTabs" IsChecked="True" Content="{DynamicResource RootHighlights}" Style="{StaticResource InventoryTab}" Checked="RootModuleTabChanged"/>
+                        <RadioButton Name="RootAllModulesTab" GroupName="RootModuleTabs" Content="{DynamicResource RootAllModules}" Style="{StaticResource InventoryTab}" Checked="RootModuleTabChanged"/>
+                        <RadioButton Name="RootInstalledTab" GroupName="RootModuleTabs" Content="{DynamicResource RootInstalledModules}" Style="{StaticResource InventoryTab}" Checked="RootModuleTabChanged" Visibility="Collapsed"/>
+                      </WrapPanel>
+                      <Grid Margin="0,10,0,8">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*"/>
+                          <ColumnDefinition Name="RootSourceColumn" Width="190"/>
+                        </Grid.ColumnDefinitions>
+                        <Border BorderBrush="#CFDCE2" BorderThickness="1" CornerRadius="7" Background="#F8FBFC" Margin="0,0,8,0">
+                          <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" Foreground="#527889" HorizontalAlignment="Center"/>
+                            <TextBox Name="RootSearch" Grid.Column="1" Style="{x:Null}" Background="Transparent" BorderThickness="0" Padding="0,8,10,8" VerticalContentAlignment="Center" TextChanged="RootSearchChanged" AutomationProperties.Name="{DynamicResource RootSearchPlaceholder}"/>
+                            <TextBlock Grid.Column="1" Text="{DynamicResource RootSearchPlaceholder}" Foreground="#6C8290" IsHitTestVisible="False">
+                              <TextBlock.Style><Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=RootSearch}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                              </Style></TextBlock.Style>
+                            </TextBlock>
+                          </Grid>
+                        </Border>
+                        <ComboBox Name="RootSource" SelectionChanged="RootSourceChanged" Grid.Column="1" SelectedIndex="0" Margin="0,0,8,0" AutomationProperties.Name="{DynamicResource RootAllSources}">
+                          <ComboBoxItem Content="{DynamicResource RootAllSources}"/>
+                          <ComboBoxItem Content="Magisk Modules Alt Repo"/>
+                          <ComboBoxItem Content="Magisk Modules Repo"/>
+                          <ComboBoxItem Content="GitHub · magisk-module"/>
+                        </ComboBox>
+                      </Grid>
+                      <TextBlock Name="RootModuleStatus" Foreground="#6C8290" FontSize="12" Margin="0,0,0,8"/>
+                      <ProgressBar Name="RootCatalogProgress" Height="4" IsIndeterminate="True" Foreground="#126782" Background="#DFEBEF" BorderThickness="0" Margin="0,0,0,8" Visibility="Collapsed"/>
+                      <ListBox Name="RootModuleList" LayoutUpdated="FitRootModules" BorderThickness="0" HorizontalContentAlignment="Stretch" Height="320" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate><DataTemplate>
+                          <Border BorderBrush="#D6E3E8" BorderThickness="0,0,0,1" Padding="5,10">
+                            <DockPanel>
+                              <Button DockPanel.Dock="Right" Tag="{Binding}" Click="RootModuleInstallClick" VerticalAlignment="Center" Margin="6,0,0,0" Background="#E7F3EC" Foreground="#276A50" BorderBrush="#BFDDCC"
+                                      ToolTip="{Binding Text, ElementName=RootModuleAvailability}" ToolTipService.ShowOnDisabled="True">
+                                <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                  <Setter Property="Content" Value="{DynamicResource RootModuleInstall}"/>
+                                  <Setter Property="IsEnabled" Value="{Binding Tag, ElementName=RootModuleList}"/>
+                                  <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Installed}" Value="True"><Setter Property="Content" Value="{DynamicResource RootModuleUpdateAction}"/></DataTrigger>
+                                    <MultiDataTrigger><MultiDataTrigger.Conditions>
+                                      <Condition Binding="{Binding Installed}" Value="True"/><Condition Binding="{Binding HasUpdate}" Value="False"/>
+                                    </MultiDataTrigger.Conditions><Setter Property="IsEnabled" Value="False"/></MultiDataTrigger>
+                                  </Style.Triggers>
+                                </Style></Button.Style>
+                              </Button>
+                              <Button DockPanel.Dock="Right" Tag="{Binding}" Click="RootModuleDownloadClick" VerticalAlignment="Center" Margin="6,0,0,0" Background="#E7F1F7" Foreground="#24596C">
+                                <StackPanel Orientation="Horizontal">
+                                  <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                                  <TextBlock Text="{DynamicResource RootDownloadShort}"/>
+                                </StackPanel>
+                              </Button>
+                              <Button DockPanel.Dock="Right" Content="{DynamicResource RootView}" Tag="{Binding Url}" Click="RootLinkClick" VerticalAlignment="Center" Margin="10,0,0,0">
+                                <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Style.Triggers>
+                                  <DataTrigger Binding="{Binding Url}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                </Style.Triggers></Style></Button.Style>
+                              </Button>
+                              <StackPanel>
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"/>
+                                <TextBlock Text="{Binding Version}" FontWeight="SemiBold" Foreground="#236966" FontSize="12">
+                                  <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers>
+                                    <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger>
+                                  </Style.Triggers></Style></TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Foreground="#526577" Margin="0,3"/>
+                                <StackPanel Orientation="Horizontal">
+                                  <TextBlock Text="{Binding Source}" Foreground="#236966" FontSize="11"/>
+                                  <TextBlock Text="{Binding Stars, StringFormat='  ★ {0}'}" Foreground="#875416" FontSize="11">
+                                    <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers>
+                                      <DataTrigger Binding="{Binding Stars}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                    </Style.Triggers></Style></TextBlock.Style>
+                                  </TextBlock>
+                                </StackPanel>
+                              </StackPanel>
+                            </DockPanel>
+                          </Border>
+                        </DataTemplate></ListBox.ItemTemplate>
+                      </ListBox>
+
                     </StackPanel>
                   </Border>
                 </StackPanel>
@@ -458,24 +816,33 @@
                       <TextBlock Style="{StaticResource Section}" Text="{DynamicResource BootTitle}" />
                       <TextBlock Style="{StaticResource Body}" Text="{DynamicResource BootHint}" Margin="0,6,0,16" />
                       <WrapPanel Margin="0,0,0,12">
-                        <Button Name="EnterBoot" Tag="Bootloader" Content="{DynamicResource ToBoot}" Margin="0,0,8,4" Click="ActionClick" />
-                        <Button Name="LeaveBoot" Tag="System" Content="{DynamicResource ToSystem}" Click="ActionClick" />
+                        <Button Name="EnterBoot" Tag="Bootloader"  Margin="0,0,8,4" Click="ActionClick"  AutomationProperties.Name="{DynamicResource ToBoot}" Background="#F0ECF8" Foreground="#67539B" BorderBrush="#D6CCE9"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE945;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource ToBoot}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Name="LeaveBoot" Tag="System"  Click="ActionClick"  AutomationProperties.Name="{DynamicResource ToSystem}" Background="#E7F3EC" Foreground="#276A50" BorderBrush="#BFDDCC"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource ToSystem}" VerticalAlignment="Center"/></StackPanel></Button>
                       </WrapPanel>
+                      <Border Background="#F0F5F8" CornerRadius="8" Padding="12,9" Margin="0,0,0,8">
+                        <StackPanel>
+                          <DockPanel>
+                            <Button Name="ReadUnlockStatus" DockPanel.Dock="Right" Content="{DynamicResource ReadUnlockStatus}" Click="ReadUnlockStatusClick" Padding="10,5"/>
+                            <TextBlock Name="OemUnlockText" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                          </DockPanel>
+                          <TextBlock Name="UnlockAvailability" Style="{StaticResource Body}" FontSize="12" Margin="0,5,0,0"/>
+                        </StackPanel>
+                      </Border>
                       <Border Background="White" BorderBrush="#CCDDE2" BorderThickness="1" CornerRadius="9" Padding="12,9" Margin="0,0,0,10">
                         <WrapPanel>
                           <TextBlock Name="BootGlyph" FontFamily="Segoe MDL2 Assets" FontSize="17" VerticalAlignment="Center" Margin="0,0,8,0"/>
                           <TextBlock Text="{DynamicResource BootState}" VerticalAlignment="Center" FontWeight="SemiBold"/>
                           <Border Name="BootBadge" CornerRadius="10" Margin="9,0,0,0" Padding="9,3">
                             <TextBlock Name="FastbootLockText" FontSize="12" FontWeight="SemiBold"/>
-                          </Border><Button Name="UnlockBoot" Visibility="Collapsed" HorizontalAlignment="Left" Margin="12,0,0,0" Content="{DynamicResource UnlockBoot}" Click="UnlockBootClick"/>
-                          <Button Name="FlashPartition" HorizontalAlignment="Left" Margin="12,0,0,0" Content="{DynamicResource FlashImage}" Click="FlashPartitionClick"/></WrapPanel></Border><Border Background="#EDF5F6" CornerRadius="8" Padding="12">
+                          </Border><Button Name="UnlockBoot" Visibility="Collapsed" HorizontalAlignment="Left" Margin="12,0,0,0"  Click="UnlockBootClick" AutomationProperties.Name="{DynamicResource UnlockBoot}" Background="#FFF2DE" Foreground="#8B571A" BorderBrush="#E9D1A8"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE785;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource UnlockBoot}" VerticalAlignment="Center"/></StackPanel></Button>
+                          <Button Name="FlashPartition" HorizontalAlignment="Left" Margin="12,0,0,0"  Click="FlashPartitionClick" AutomationProperties.Name="{DynamicResource FlashImage}" Background="#845321" Foreground="#FFFFFF" BorderBrush="#845321"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE945;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource FlashImage}" VerticalAlignment="Center"/></StackPanel></Button></WrapPanel></Border><Border Background="#EDF5F6" CornerRadius="8" Padding="12">
                         <StackPanel>
                           <TextBlock FontWeight="SemiBold" Text="{DynamicResource BootInspect}" />
                           <TextBlock Style="{StaticResource Body}" Text="{DynamicResource BootInspectHint}" Margin="0,3,0,8" />
                           <WrapPanel>
-                            <Button Name="ReadProduct" Tag="Product" Content="{DynamicResource Product}" Margin="0,0,6,4" Click="ActionClick" />
-                            <Button Name="ReadSlot" Tag="ReadSlot" Content="{DynamicResource ReadSlot}" Margin="0,0,6,4" Click="ActionClick" />
-                            <Button Name="ReadBootVersion" Tag="BootVersion" Content="{DynamicResource BootVersion}" Margin="0,0,6,4" Click="ActionClick" />
+                            <Button Name="ReadProduct" Tag="Product"  Margin="0,0,6,4" Click="ActionClick"  AutomationProperties.Name="{DynamicResource Product}" Background="#E8F2F9" Foreground="#32698C" BorderBrush="#C5DCEB"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A7;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource Product}" VerticalAlignment="Center"/></StackPanel></Button>
+                            <Button Name="ReadSlot" Tag="ReadSlot"  Margin="0,0,6,4" Click="ActionClick"  AutomationProperties.Name="{DynamicResource ReadSlot}" Background="#F0ECF8" Foreground="#67539B" BorderBrush="#D6CCE9"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B1;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource ReadSlot}" VerticalAlignment="Center"/></StackPanel></Button>
+                            <Button Name="ReadBootVersion" Tag="BootVersion"  Margin="0,0,6,4" Click="ActionClick"  AutomationProperties.Name="{DynamicResource BootVersion}" Background="#E8F2F9" Foreground="#32698C" BorderBrush="#C5DCEB"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE946;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource BootVersion}" VerticalAlignment="Center"/></StackPanel></Button>
                           </WrapPanel>
                           
                         </StackPanel>
@@ -485,15 +852,15 @@
                 <Border Background="#142733" CornerRadius="9" Padding="12" Margin="0,4,0,0">
                 <DockPanel>
                   <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                    <Button DockPanel.Dock="Right" Content="{DynamicResource ClearLog}" Click="ClearConsole" Padding="8,2"/>
-                    <Button IsEnabled="{Binding IsEnabled, ElementName=StopCommand}" DockPanel.Dock="Right" Margin="0,0,5,0" Content="{DynamicResource Cancel}" Click="StopConsole" Padding="8,2"/>
+                    <Button DockPanel.Dock="Right"  Click="ClearConsole" Padding="8,2" AutomationProperties.Name="{DynamicResource ClearLog}" Background="#EAF0F4" Foreground="#334E60" BorderBrush="#CAD8E0"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE75C;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource ClearLog}" VerticalAlignment="Center"/></StackPanel></Button>
+                    <Button IsEnabled="{Binding IsEnabled, ElementName=StopCommand}" DockPanel.Dock="Right" Margin="0,0,5,0"  Click="StopConsole" Padding="8,2" AutomationProperties.Name="{DynamicResource Cancel}" Background="#FBECEF" Foreground="#9B3545" BorderBrush="#EAC8CE"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource Cancel}" VerticalAlignment="Center"/></StackPanel></Button>
                     <TextBlock Text="Fastboot" VerticalAlignment="Center" Foreground="#AAC6CF" FontWeight="SemiBold"/>
                   </DockPanel>
                   <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
                     <TextBlock Text="fastboot ›" Foreground="#82DBC5" VerticalAlignment="Center" FontFamily="Consolas" Margin="0,0,8,0"/>
-                    <TextBox Name="FastInput" KeyDown="ConsoleKey" AutomationProperties.Name="fastboot" FontFamily="Consolas" Style="{x:Null}" Background="Transparent" Foreground="White" CaretBrush="White" BorderThickness="0" Padding="0,3"/>
+                    <TextBox Name="FastInput" KeyDown="ConsoleKey" AutomationProperties.Name="fastboot" FontFamily="Consolas" Style="{x:Null}" Background="Transparent" Foreground="White" CaretBrush="White" BorderThickness="0" Padding="0,3" TextWrapping="Wrap" HorizontalScrollBarVisibility="Disabled"/>
                   </DockPanel>
-                  <TextBox Name="FastOutput" Text="{Binding Text, ElementName=ConsoleOutput, Mode=OneWay}" Height="145" TextChanged="ScrollConsole" IsVisibleChanged="ShowConsoleTail" Style="{x:Null}" Background="Transparent" Foreground="#DCE9EE" BorderThickness="0" FontFamily="Consolas" IsReadOnly="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+                  <TextBox Name="FastOutput" LayoutUpdated="FitModeConsole" Text="{Binding Text, ElementName=ConsoleOutput, Mode=OneWay}" Height="145" TextChanged="ScrollConsole" IsVisibleChanged="ShowConsoleTail" Style="{StaticResource ConsoleOutputStyle}"/>
                 </DockPanel>
               </Border>
           </StackPanel>
@@ -506,9 +873,9 @@
                       </DockPanel>
                       <TextBlock Style="{StaticResource Body}" Text="{DynamicResource RecoveryHint}" Margin="0,3,0,8" />
                       <WrapPanel>
-                        <Button Name="EnterRecovery" Tag="Recovery" Content="{DynamicResource ToRecovery}" Margin="0,0,8,4" Click="ActionClick" />
-                        <Button Name="RecoveryBoot" Tag="Bootloader" Content="{DynamicResource ToBoot}" Margin="0,0,8,4" Click="ActionClick" />
-                        <Button Name="LeaveRecovery" Tag="System" Content="{DynamicResource ToSystem}" Margin="0,0,0,4" Click="ActionClick" />
+                        <Button Name="EnterRecovery" Tag="Recovery"  Margin="0,0,8,4" Click="ActionClick"  AutomationProperties.Name="{DynamicResource ToRecovery}" Background="#E5F3F3" Foreground="#176B70" BorderBrush="#BDDCDD"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE777;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource ToRecovery}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Name="RecoveryBoot" Tag="Bootloader"  Margin="0,0,8,4" Click="ActionClick"  AutomationProperties.Name="{DynamicResource ToBoot}" Background="#F0ECF8" Foreground="#67539B" BorderBrush="#D6CCE9"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE945;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource ToBoot}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Name="LeaveRecovery" Tag="System"  Margin="0,0,0,4" Click="ActionClick"  AutomationProperties.Name="{DynamicResource ToSystem}" Background="#E7F3EC" Foreground="#276A50" BorderBrush="#BFDDCC"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource ToSystem}" VerticalAlignment="Center"/></StackPanel></Button>
                       </WrapPanel>
                     </StackPanel>
                   </Border>
@@ -517,9 +884,9 @@
                       <StackPanel Orientation="Horizontal"><Border Background="#E4F3F1" CornerRadius="5" Padding="5,2" Margin="0,0,8,0"><TextBlock Text="02" Foreground="#236966" FontWeight="SemiBold" FontSize="11"/></Border><TextBlock Style="{StaticResource Section}" Text="{DynamicResource UpdateTitle}"/></StackPanel>
                       <TextBlock Style="{StaticResource Body}" Text="{DynamicResource UpdateHint}" Margin="0,3,0,8" />
                       <WrapPanel>
-                        <Button Name="StartSideload" Visibility="Collapsed" Tag="StartSideload" Click="ActionClick" Content="{DynamicResource StartSideload}" Margin="0,0,8,4" />
-                        <Button Tag="zip" Content="{DynamicResource PickZip}" Margin="0,0,8,4" Click="PickFile" />
-                        <Button Name="SendZip" Style="{StaticResource Primary}" Tag="Sideload" Content="{DynamicResource Sideload}" Margin="0,0,0,4" Click="ActionClick" />
+                        <Button Name="StartSideload" Visibility="Collapsed" Tag="StartSideload" Click="ActionClick"  Margin="0,0,8,4"  AutomationProperties.Name="{DynamicResource StartSideload}" Background="#E5F3F3" Foreground="#176B70" BorderBrush="#BDDCDD"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE896;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource StartSideload}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Tag="zip"  Margin="0,0,8,4" Click="PickFile"  AutomationProperties.Name="{DynamicResource PickZip}" Background="#E8F2F9" Foreground="#32698C" BorderBrush="#C5DCEB"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B7;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource PickZip}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Name="SendZip" Style="{StaticResource Primary}" Tag="Sideload"  Margin="0,0,0,4" Click="ActionClick"  AutomationProperties.Name="{DynamicResource Sideload}" Background="#126782" Foreground="#FFFFFF" BorderBrush="#126782"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE898;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource Sideload}" VerticalAlignment="Center"/></StackPanel></Button>
                       </WrapPanel>
                       <TextBlock Name="ZipName" TextWrapping="Wrap" Foreground="#526577" Margin="0,6,0,0" />
                     </StackPanel>
@@ -529,9 +896,9 @@
                       <StackPanel Orientation="Horizontal"><Border Background="#E4F3F1" CornerRadius="5" Padding="5,2" Margin="0,0,8,0"><TextBlock Text="03" Foreground="#236966" FontWeight="SemiBold" FontSize="11"/></Border><TextBlock Style="{StaticResource Section}" Text="{DynamicResource RecoveryTools}"/></StackPanel>
                       <TextBlock Style="{StaticResource Body}" Text="{DynamicResource RecoveryToolHint}" Margin="0,4,0,10"/>
                       <WrapPanel Name="RecoveryQueries">
-                        <Button Tag="RecoveryLog" Content="{DynamicResource RecoveryLog}" Click="ActionClick" Margin="0,0,6,4"/>
-                        <Button Tag="RecoveryStorage" Content="{DynamicResource RecoveryStorage}" Click="ActionClick" Margin="0,0,6,4"/>
-                        <Button Tag="RecoveryFiles" Content="{DynamicResource RecoveryFiles}" Click="ActionClick" Margin="0,0,6,4"/>
+                        <Button Tag="RecoveryLog"  Click="ActionClick" Margin="0,0,6,4" AutomationProperties.Name="{DynamicResource RecoveryLog}" Background="#E8F2F9" Foreground="#32698C" BorderBrush="#C5DCEB"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A5;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource RecoveryLog}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Tag="RecoveryStorage"  Click="ActionClick" Margin="0,0,6,4" AutomationProperties.Name="{DynamicResource RecoveryStorage}" Background="#F0ECF8" Foreground="#67539B" BorderBrush="#D6CCE9"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEDA2;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource RecoveryStorage}" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Button Tag="RecoveryFiles"  Click="ActionClick" Margin="0,0,6,4" AutomationProperties.Name="{DynamicResource RecoveryFiles}" Background="#E5F3F3" Foreground="#176B70" BorderBrush="#BDDCDD"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B7;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource RecoveryFiles}" VerticalAlignment="Center"/></StackPanel></Button>
                       </WrapPanel>
                       <TextBox Name="RecoveryResult" Visibility="Collapsed" IsReadOnly="True" FontFamily="Consolas" FontSize="12" MaxHeight="180" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="8"/>
                     </StackPanel>
@@ -539,15 +906,15 @@
                   <Border Background="#142733" CornerRadius="9" Padding="12" Margin="0,4,0,0">
                 <DockPanel>
                   <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                    <Button DockPanel.Dock="Right" Content="{DynamicResource ClearLog}" Click="ClearConsole" Padding="8,2"/>
-                    <Button IsEnabled="{Binding IsEnabled, ElementName=StopCommand}" DockPanel.Dock="Right" Margin="0,0,5,0" Content="{DynamicResource Cancel}" Click="StopConsole" Padding="8,2"/>
+                    <Button DockPanel.Dock="Right"  Click="ClearConsole" Padding="8,2" AutomationProperties.Name="{DynamicResource ClearLog}" Background="#EAF0F4" Foreground="#334E60" BorderBrush="#CAD8E0"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE75C;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource ClearLog}" VerticalAlignment="Center"/></StackPanel></Button>
+                    <Button IsEnabled="{Binding IsEnabled, ElementName=StopCommand}" DockPanel.Dock="Right" Margin="0,0,5,0"  Click="StopConsole" Padding="8,2" AutomationProperties.Name="{DynamicResource Cancel}" Background="#FBECEF" Foreground="#9B3545" BorderBrush="#EAC8CE"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;" FontSize="14" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource Cancel}" VerticalAlignment="Center"/></StackPanel></Button>
                     <TextBlock Text="{DynamicResource RecoveryConsole}" VerticalAlignment="Center" Foreground="#AAC6CF" FontWeight="SemiBold"/>
                   </DockPanel>
                   <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
                     <TextBlock Text="adb ›" Foreground="#82DBC5" VerticalAlignment="Center" FontFamily="Consolas" Margin="0,0,8,0"/>
-                    <TextBox Name="RecoveryInput" KeyDown="ConsoleKey" AutomationProperties.Name="adb" FontFamily="Consolas" Style="{x:Null}" Background="Transparent" Foreground="White" CaretBrush="White" BorderThickness="0" Padding="0,3"/>
+                    <TextBox Name="RecoveryInput" KeyDown="ConsoleKey" AutomationProperties.Name="adb" FontFamily="Consolas" Style="{x:Null}" Background="Transparent" Foreground="White" CaretBrush="White" BorderThickness="0" Padding="0,3" TextWrapping="Wrap" HorizontalScrollBarVisibility="Disabled"/>
                   </DockPanel>
-                  <TextBox Name="RecoveryOutput" Text="{Binding Text, ElementName=ConsoleOutput, Mode=OneWay}" Height="145" TextChanged="ScrollConsole" IsVisibleChanged="ShowConsoleTail" Style="{x:Null}" Background="Transparent" Foreground="#DCE9EE" BorderThickness="0" FontFamily="Consolas" IsReadOnly="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+                  <TextBox Name="RecoveryOutput" LayoutUpdated="FitModeConsole" Text="{Binding Text, ElementName=ConsoleOutput, Mode=OneWay}" Height="145" TextChanged="ScrollConsole" IsVisibleChanged="ShowConsoleTail" Style="{StaticResource ConsoleOutputStyle}"/>
                 </DockPanel>
               </Border>
                 </StackPanel>
@@ -562,5 +929,33 @@
         <Button Style="{StaticResource CloseButton}" Content="" ToolTip="{DynamicResource Close}" AutomationProperties.Name="{DynamicResource Close}" Click="CloseClick" />
       </StackPanel>
     </Grid>
+    <Grid Name="OperationOverlay" Grid.ColumnSpan="2" Panel.ZIndex="700" Background="#80152E3E" Visibility="Collapsed" Focusable="True" KeyboardNavigation.TabNavigation="Cycle">
+      <Border MaxWidth="460" Margin="28" Padding="24" CornerRadius="14" Background="White" BorderBrush="#D0DFE7" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel>
+          <StackPanel Orientation="Horizontal">
+            <Border Background="#E5F3F3" CornerRadius="11" Width="42" Height="42" Margin="0,0,12,0">
+              <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="21" Foreground="#126782" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="{DynamicResource FeedbackWorking}" FontSize="21" FontWeight="SemiBold"/>
+              <TextBlock Name="OperationLabel" Foreground="#526577" Margin="0,3,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+          </StackPanel>
+          <ProgressBar Height="5" IsIndeterminate="True" Foreground="#126782" Background="#DFEBEF" BorderThickness="0" Margin="0,20,0,0"/>
+          <StackPanel Margin="0,14,0,0">
+            <StackPanel.Style><Style TargetType="StackPanel">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers><DataTrigger Binding="{Binding Visibility, ElementName=BatchProgressCard}" Value="Visible"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+            </Style></StackPanel.Style>
+            <TextBlock Text="{Binding Text, ElementName=BatchStage}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding Text, ElementName=BatchCurrentApp}" Foreground="#526577" TextWrapping="Wrap" Margin="0,4,0,8"/>
+            <ProgressBar Height="6" Maximum="{Binding Maximum, ElementName=BatchProgress}" Value="{Binding Value, ElementName=BatchProgress, Mode=OneWay}" IsIndeterminate="{Binding IsIndeterminate, ElementName=BatchProgress}" Foreground="#126782" Background="#DFEBEF" BorderThickness="0"/>
+            <TextBlock Text="{Binding Text, ElementName=BatchProgressCount}" FontSize="12" Foreground="#526577" HorizontalAlignment="Right" Margin="0,4,0,0"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+    <Border Name="ModalShade" Grid.ColumnSpan="2" Panel.ZIndex="800" Background="#80152E3E" Visibility="Collapsed"/>
+    <ProgressBar Name="ActivityBar" Grid.ColumnSpan="2" Panel.ZIndex="900" IsIndeterminate="True" Height="3" VerticalAlignment="Top" Visibility="Collapsed" Foreground="#34B4A8" Background="Transparent" BorderThickness="0" IsHitTestVisible="False"/>
   </Grid>
 </Window>

@@ -15,7 +15,7 @@ public partial class MainWindow : Window
     private AndroidBridge bridge;
     private IScreenMirror mirror;
     private CancellationTokenSource? mirrorSession;
-    private string? lockedSerial, pictureKey, stayAwakeSerial;
+    private string? lockedSerial, pictureKey;
     private static readonly System.Net.Http.HttpClient photos = new() { Timeout = TimeSpan.FromSeconds(7) };
     private string? unlockSerial;
     private string? mirrorSerial;
@@ -27,7 +27,7 @@ public partial class MainWindow : Window
     private bool initialized, busy, partialScan;
     private readonly System.Windows.Threading.DispatcherTimer monitor = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly Func<bool> detectMtp;
-    private bool autoScanning, mtp, odin;
+    private bool autoScanning, mtp, odin, updateChecking;
     private int generation;
     private readonly Queue<string> log = new();
     private string resultKey = "Idle", resultDetail = "";
@@ -81,6 +81,10 @@ public partial class MainWindow : Window
             finally { autoScanning = false; }
         };
         Loaded += (_, _) => monitor.Start();
+        Activated += (_, _) =>
+        {
+            if (initialized && page == "Install" && !busy) nextInventory = DateTime.MinValue;
+        };
         Closed += (_, _) => { monitor.Stop(); consoleCommand?.Cancel(); };
         Closing += OnClosing;
         Closed += (_, _) => mirrorSession?.Cancel();
@@ -100,12 +104,15 @@ public partial class MainWindow : Window
         {
             var updater = new Velopack.UpdateManager(new Velopack.Sources.GithubSource("https://github.com/f22r/MasronDroid", null, false));
             if (!updater.IsInstalled) return;
+            updateChecking = true;
+            RenderActivity();
             var next = await updater.CheckForUpdatesAsync();
             if (next == null) return;
             await updater.DownloadUpdatesAsync(next);
             Report("UpdateReady");
         }
         catch (Exception ex) { if (IsLoaded) Report("UpdateUnavailable", ex.Message); }
+        finally { updateChecking = false; RenderActivity(); }
     }
 
     private async Task SetPicture(string? key)
@@ -175,10 +182,25 @@ public partial class MainWindow : Window
     {
         if (!initialized) return;
         page = (string)((RadioButton)sender).Tag;
+        if (page == "Install") nextInventory = DateTime.MinValue;
         if (page != "Device") mirrorSession?.Cancel();
 
         Render();
         PageScroll.ScrollToTop();
+        if (page == "Rooting")
+        {
+            _ = CheckLatestMagiskAuto();
+            _ = UpdateMagiskStatus(Selected);
+            _ = CheckRootTransfer(Selected, true);
+            _ = UpdateRootRuntime(Selected);
+        }
+        if (page == "Rooting" && RootWorkspaceModules.IsChecked == true && rootPage == 0)
+        {
+            rootSource = RootSource.SelectedIndex;
+            rootQuery = RootSearch.Text;
+            if (RootHighlightsTab.IsChecked == true) _ = LoadRootHighlights();
+            else _ = LoadRootModules(1);
+        }
     }
 
     private void ScrollConsole(object sender, TextChangedEventArgs e) => QueueConsoleScroll((TextBox)sender);
@@ -211,7 +233,11 @@ public partial class MainWindow : Window
     private async void RunConsole(object sender, RoutedEventArgs e)
     {
         bool fastboot = sender == FastInput;
-        var input = fastboot ? FastInput : sender == RecoveryInput ? RecoveryInput : AdbCommand;
+        var input = fastboot ? FastInput : sender == RecoveryInput ? RecoveryInput : sender == RootInput ? RootInput : AdbCommand;
+        if (fastboot && Selected is not { Tool: "fastboot", State: "fastboot" }) return;
+        if (sender == RecoveryInput && Selected is not { Tool: "adb", State: "recovery" or "sideload" }) return;
+        if (sender == RootInput && Selected is not { Tool: "adb", State: "device" or "recovery" or "sideload" }) return;
+        if (busy) return;
         string tool = fastboot ? "fastboot" : "adb";
         var command = input.Text.Trim();
         if (consoleCommand != null || command.Length == 0) return;
@@ -232,17 +258,25 @@ public partial class MainWindow : Window
         try
         {
             int code = await PlatformTools.StreamCommand(tool, command, serial, AppendLine, stop.Token);
-            if (!stop.IsCancellationRequested) AppendLine(tool + ": " + code);
+            if (!stop.IsCancellationRequested) Report(code == 0 ? "ConsoleCompleted" : "ConsoleFailed", "", tool, code);
+            else Report("ConsoleCancelled", "", tool);
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or Win32Exception or BridgeException)
-        { AppendLine(ex.Message); }
+        { Report("OperationFailed", ex.Message); }
         finally { consoleCommand = null; if (IsLoaded) Render(); }
     }
 
     private void Report(string key, string detail = "", params object[] args)
     {
+        if (!Dispatcher.CheckAccess())
+        {
+            if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(() => Report(key, detail, args)));
+            return;
+        }
+        if (key == "RootError" && args.Length == 0) { args = [detail]; detail = ""; }
         (resultKey, resultDetail, resultArgs) = (key, detail, args);
         AppendResult();
+        CaptureNotice(key, detail, args);
     }
 
     private void AppendResult()
@@ -254,6 +288,11 @@ public partial class MainWindow : Window
 
     private void AppendLine(string line)
     {
+        if (!Dispatcher.CheckAccess())
+        {
+            if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(() => AppendLine(line)));
+            return;
+        }
         log.Enqueue($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {line[..Math.Min(line.Length, 4096)]}");
         if (log.Count > 200) log.Dequeue();
         ConsoleOutput.Text = string.Join(Environment.NewLine, log);
@@ -270,12 +309,27 @@ public partial class MainWindow : Window
     {
         if (busy) return;
         generation++;
+        operationNotice = null;
+        lastBackgroundNotice = "";
+        BatchProgressCard.Visibility = Visibility.Collapsed;
         busy = true;
+        OperationLabel.Text = T(pending);
         Render();
         Report(pending);
         try { await job(); }
         catch (BridgeException ex) { ReportError(ex); }
-        finally { busy = false; Render(); }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Report("OperationFailed", ex.Message);
+        }
+        finally
+        {
+            busy = false;
+            Render();
+            if (operationNotice is { } notice) EnqueueNotice(notice);
+            operationNotice = null;
+            ScheduleNotices();
+        }
     }
 
     private async Task RefreshTargets(bool showResult, bool automatic = false)
@@ -318,6 +372,7 @@ public partial class MainWindow : Window
             else if (mtp) Report("MtpHint");
             else Report("Scanned", string.Join(Environment.NewLine, ordered.Select(x => x.Details)), ordered.Length);
         }
+        await RefreshScreenAwake(ordered);
         var target = Selected;
         bool? locked = target is { Tool: "adb", State: "device" } ? await bridge.IsLocked(target) : null;
         if (!IsLoaded || revision != generation || Selected != target) return;
@@ -349,10 +404,19 @@ public partial class MainWindow : Window
             Report("MirrorStarting", "", target.Serial);
             _ = ObserveMirror(target.Serial, mirrorSession);
         }
+        _ = UpdateRootRecovery(target);
+        if (page == "Rooting")
+        {
+            _ = CheckLatestMagiskAuto();
+            _ = UpdateMagiskStatus(target);
+            _ = CheckRootTransfer(target, !automatic);
+            _ = UpdateRootRuntime(target);
+        }
         if (!automatic || statusChanged) Render();
+        if (page is "Device" or "Install") _ = RefreshRunningApps(target);
         if (page == "Install" && target is { Tool: "adb", State: "device" } &&
             !inventoryLoading && (!automatic || DateTime.UtcNow >= nextInventory))
-            _ = LoadInventory(target);
+            _ = LoadInventory(target, sizesOnly: automatic && inventory.Count > 0 && DateTime.UtcNow < nextInventoryMetadata);
         if (((target is { Tool: "adb", State: "device" } && (page is "Device" or "Install" or "Fastboot")) || (target is { Tool: "fastboot", State: "fastboot" } && (page is "Device" or "Fastboot"))) &&
             !readingFacts && (!automatic || DateTime.UtcNow >= nextFactsRead))
             _ = RefreshFacts(target, revision, automatic);
@@ -363,15 +427,20 @@ public partial class MainWindow : Window
     private async Task RefreshFacts(Target target, int revision, bool automatic)
     {
         readingFacts = true;
+        RenderActivity();
         nextFactsRead = DateTime.UtcNow.AddSeconds(15);
         try
         {
             var snapshot = target.Tool == "fastboot" ? await bridge.ReadBootState(target) : await bridge.ReadDeviceInfo(target);
             if (Selected != target || !IsLoaded || revision != generation) return;
+            var previousName = facts.GetValueOrDefault("MarketName");
             var previousBrand = facts.GetValueOrDefault("Brand");
+            foreach (var volatileKey in new[] { "BSOH", "ASOC", "FullCapacity", "DesignCapacity", "BatteryHealth", "Battery", "Storage", "StorageRemaining" })
+                facts.Remove(volatileKey);
             foreach (var (key, value) in snapshot) facts[key] = value;
             if (previousBrand != facts.GetValueOrDefault("Brand") && inventory.Count > 0) ApplyInventoryFilter();
-            RenderDeviceFacts();
+            if (previousName != facts.GetValueOrDefault("MarketName")) Render();
+            else RenderDeviceFacts();
             if (target.Tool == "fastboot" || page == "Fastboot") return;
             if (!automatic || DateTime.UtcNow >= nextAppsRead)
             {
@@ -392,7 +461,7 @@ public partial class MainWindow : Window
         {
             if (Selected == target && IsLoaded && revision == generation) ReportError(ex);
         }
-        finally { readingFacts = false; }
+        finally { readingFacts = false; RenderActivity(); }
     }
 
     private bool wifiPending;
@@ -428,6 +497,7 @@ public partial class MainWindow : Window
         QrImage.Source = null;
         QrPanel.Visibility = Visibility.Collapsed;
         QrButton.Visibility = ManualWifi.Visibility = Visibility.Visible;
+        RenderActivity();
     }
 
     private void ShowManual(object sender, RoutedEventArgs e)
@@ -460,6 +530,7 @@ public partial class MainWindow : Window
         ManualWifi.Visibility = QrButton.Visibility = Visibility.Collapsed;
         WifiStatus.Text = "";
         var deadline = DateTime.UtcNow.AddMinutes(2);
+        RenderActivity();
         try
         {
             while (qrInstance == instance && DateTime.UtcNow < deadline)
@@ -474,7 +545,7 @@ public partial class MainWindow : Window
                     if (qrInstance != instance) return;
                     ResetQr();
                     WifiStatus.Text = wifiMessage = T("WifiPaired");
-                    AppendLine(wifiMessage);
+                    Report("WifiPaired");
                     nextWirelessScan = DateTime.MinValue;
                     return;
                 }
@@ -483,12 +554,14 @@ public partial class MainWindow : Window
             if (qrInstance != instance) return;
             ResetQr();
             WifiStatus.Text = T("WifiQrExpired");
+            Report("WifiQrExpired");
         }
         catch (BridgeException ex)
         {
             if (qrInstance != instance) return;
             ResetQr();
             WifiStatus.Text = ex.Key == "TimedOut" ? T("WifiTimeout") : ex.Key == "ToolFailed" ? ex.Message : T(ex.Key, "adb");
+            ReportError(ex);
         }
     }
 
@@ -530,7 +603,7 @@ public partial class MainWindow : Window
             {
                 await bridge.Wireless(address, code);
                 WifiStatus.Text = T(pair ? "WifiPaired" : "WifiConnected");
-                AppendLine(WifiStatus.Text);
+                Report(pair ? "WifiPaired" : "WifiConnected");
                 wifiMessage = WifiStatus.Text;
                 if (!pair) WifiPopup.IsOpen = false;
                 if (busy || !Equals(initialSelection, Targets.SelectedItem)) return;
@@ -558,6 +631,7 @@ public partial class MainWindow : Window
     private void TargetChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!initialized) return;
+        if (page == "Rooting") _ = UpdateRootRuntime(Selected);
         mirrorFailure = null;
         if (!updatingTargets) CheckMirrorTarget();
         nextMirrorAttempt = DateTime.MinValue;
@@ -569,7 +643,6 @@ public partial class MainWindow : Window
     {
         if (Selected?.Serial != unlockSerial) unlockSerial = null;
         if (Selected?.Serial != rotatedSerial) rotatedSerial = null;
-        if (Selected?.Serial != stayAwakeSerial) stayAwakeSerial = null;
         if (Selected?.Serial != mirrorSerial || Selected?.State != "device") mirrorSession?.Cancel();
     }
 
@@ -580,7 +653,7 @@ public partial class MainWindow : Window
     private void BatteryInfoClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string explanation })
-            MessageBox.Show(this, explanation, T("BatteryHealth"), MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowInformation(T("Information"), explanation);
     }
 
     private sealed record InventoryEntry(string Package, string Name, bool System, bool Enabled, bool Installed, string? Icon, long? Bytes = null, long? CacheBytes = null);
@@ -613,20 +686,28 @@ public partial class MainWindow : Window
         };
         public string? RatingTip => rating == null ? null : rating[1] + Environment.NewLine + rating[2];
         public bool Checked { get; set; }
+        public bool Running { get; set; }
+        public bool CanReleaseMemory { get; set; }
+        public bool SelectionEnabled { get; set; } = true;
+        public Visibility RunningVisibility => Running ? Visibility.Visible : Visibility.Collapsed;
     }
     private List<InventoryRow> inventory = [];
     private DateTime nextInventory;
+    private DateTime nextInventoryMetadata;
     private bool inventoryLoading;
     private int inventoryRevision;
 
-    private async Task LoadInventory(Target target)
+    private async Task LoadInventory(Target target, bool sizesOnly = false)
     {
         int revision = inventoryRevision;
         inventoryLoading = true;
-        InventoryStatus.Text = T("AppLoading");
+        RenderActivity();
+        if (!sizesOnly || inventory.Count == 0) InventoryStatus.Text = T("AppLoading");
         try
         {
-            string output = await bridge.ReadAppList(target);
+            string output = await bridge.ReadAppList(target, sizesOnly);
+            var disabled = AndroidBridge.Packages(await bridge.Execute(target, DeviceAction.PackagesDisabled)).ToHashSet(StringComparer.Ordinal);
+            var enabled = AndroidBridge.Packages(await bridge.Execute(target, DeviceAction.PackagesEnabled)).ToHashSet(StringComparer.Ordinal);
             var rows = await Task.Run(() =>
             {
                 var result = new List<InventoryRow>();
@@ -634,6 +715,8 @@ public partial class MainWindow : Window
                 {
                     var entry = JsonSerializer.Deserialize<InventoryEntry>(line);
                     if (entry == null || string.IsNullOrEmpty(entry.Package)) continue;
+                    if (disabled.Contains(entry.Package)) entry = entry with { Enabled = false };
+                    else if (enabled.Contains(entry.Package)) entry = entry with { Enabled = true };
                     System.Windows.Media.Imaging.BitmapImage? icon = null;
                     if (entry.Icon is { Length: > 0 })
                     {
@@ -653,9 +736,17 @@ public partial class MainWindow : Window
             if (Selected != target || revision != inventoryRevision) return;
             var selectedPackages = inventory.Where(x => x.Checked).Select(x => x.Entry.Package).ToHashSet();
             foreach (var row in rows) row.Checked = selectedPackages.Contains(row.Entry.Package);
+            if (sizesOnly)
+            {
+                var previous = inventory.ToDictionary(row => row.Entry.Package);
+                rows = rows.Select(row => previous.TryGetValue(row.Entry.Package, out var old)
+                    ? row with { Entry = row.Entry with { Name = old.Entry.Name, Icon = old.Entry.Icon }, Image = old.Image }
+                    : row).OrderBy(row => row.Entry.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+            }
             inventory = rows;
             RenderDeviceFacts();
-            nextInventory = DateTime.UtcNow.AddMinutes(5);
+            nextInventory = DateTime.UtcNow.AddSeconds(30);
+            if (!sizesOnly) nextInventoryMetadata = DateTime.UtcNow.AddMinutes(5);
             ApplyInventoryFilter();
         }
         catch (Exception ex)
@@ -664,12 +755,26 @@ public partial class MainWindow : Window
             nextInventory = DateTime.UtcNow.AddSeconds(30);
             InventoryStatus.Text = T("AppReadError");
             if (ex is BridgeException problem) ReportError(problem);
+            else Report("OperationFailed", ex.Message);
         }
-        finally { inventoryLoading = false; }
+        finally { inventoryLoading = false; RenderActivity(); }
+    }
+
+    private string? inventorySortColumn;
+    private bool inventorySortDescending;
+
+    private void InventoryHeaderClick(object sender, RoutedEventArgs e)
+    {
+        var column = (string)((Button)sender).Tag;
+        inventorySortDescending = inventorySortColumn == column && !inventorySortDescending;
+        inventorySortColumn = column;
+        InventorySort.SelectedIndex = -1;
+        ApplyInventoryFilter();
     }
 
     private void InventoryFilterChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (sender == InventorySort && InventorySort.SelectedIndex >= 0) inventorySortColumn = null;
         if (initialized) { ApplyInventoryFilter(); RenderDeviceFacts(); }
     }
 
@@ -695,7 +800,15 @@ public partial class MainWindow : Window
             "xiaomi" or "redmi" or "poco" => "xiaomi",
             _ => null
         };
-        foreach (var row in inventory) row.MatchRating(group);
+        foreach (var row in inventory)
+        {
+            row.MatchRating(group);
+            row.Running = runningAppsKnown && runningAppsTarget == Selected && runningApps.ContainsKey(row.Entry.Package);
+            row.CanReleaseMemory = row.Running && !row.Entry.System && row.Entry.Installed && row.Entry.Enabled
+                && runningApps.GetValueOrDefault(row.Entry.Package);
+            row.SelectionEnabled = RunningAppsTab.IsChecked != true || row.CanReleaseMemory;
+            if (!row.SelectionEnabled) row.Checked = false;
+        }
         var rows = inventory.Where(x => InventoryFilter.SelectedIndex switch
         {
             1 => x.Entry.Installed && x.Entry.Enabled,
@@ -705,6 +818,7 @@ public partial class MainWindow : Window
             5 => !x.Entry.Installed,
             _ => x.Entry.Installed
         }).ToList();
+        if (RunningAppsTab.IsChecked == true) rows = rows.Where(row => row.Running).ToList();
         string query = InventorySearch.Text.Trim();
         if (query.Length > 0)
             rows = rows.Where(x => x.Entry.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase)
@@ -717,8 +831,32 @@ public partial class MainWindow : Window
             4 => rows.OrderBy(x => x.Level == "0").ThenBy(x => x.Level).ThenBy(x => x.Entry.Name, StringComparer.CurrentCultureIgnoreCase),
             _ => rows.AsEnumerable()
         };
+        if (inventorySortColumn is { } column)
+        {
+            IOrderedEnumerable<InventoryRow> ordered;
+            if (column == "Name")
+                ordered = inventorySortDescending
+                    ? rows.OrderByDescending(row => row.Entry.Name, StringComparer.CurrentCultureIgnoreCase)
+                    : rows.OrderBy(row => row.Entry.Name, StringComparer.CurrentCultureIgnoreCase);
+            else
+            {
+                Func<InventoryRow, long?> value = column switch
+                {
+                    "Cache" => row => row.Entry.CacheBytes,
+                    "Size" => row => row.Entry.Bytes,
+                    _ => row => row.Level == "0" ? null : int.Parse(row.Level)
+                };
+                ordered = inventorySortDescending
+                    ? rows.OrderBy(row => !value(row).HasValue).ThenByDescending(value)
+                    : rows.OrderBy(row => !value(row).HasValue).ThenBy(value);
+            }
+            InventoryList.ItemsSource = ordered.ThenBy(row => row.Entry.Name, StringComparer.CurrentCultureIgnoreCase);
+        }
+        foreach (var (header, key) in new[] { (SortHeaderName, "InventoryName"), (SortHeaderRisk, "InventoryRisk"), (SortHeaderSize, "InventorySize"), (SortHeaderCache, "CacheSize") })
+            header.Content = T(key) + (Equals(header.Tag, inventorySortColumn) ? inventorySortDescending ? " ▼" : " ▲" : "");
         UpdateBatchButtons();
         InventoryStatus.Text = Selected is not { Tool: "adb", State: "device" } ? T("NeedAdb")
+            : RunningAppsTab.IsChecked == true && !runningAppsKnown ? T("RunningAppsUnavailable")
             : inventory.Count == 0 ? T("AppLoading") : T("AppResults", rows.Count);
         if (rows.Count > 0 && Selected is { Tool: "adb", State: "device" })
         {
@@ -743,6 +881,11 @@ public partial class MainWindow : Window
             nextInventory = DateTime.MinValue;
             nextFactsRead = nextAppsRead = DateTime.MinValue;
         }
+        AppStorageRemaining.Text = facts.GetValueOrDefault("StorageRemaining", T("HealthUnavailable"));
+        RunningRamValue.Text = facts.GetValueOrDefault("Ram", "—");
+        bool ramKnown = int.TryParse(facts.GetValueOrDefault("RamPercent"), out int ramPercent) && ramPercent is >= 0 and <= 100;
+        RunningRamPercent.Text = ramKnown ? ramPercent + "%" : "—";
+        RunningRamProgress.Value = ramKnown ? ramPercent : 0;
         if (page == "Install")
             AppSummary.ItemsSource = AppGroups.Select(key =>
             {
@@ -780,7 +923,20 @@ public partial class MainWindow : Window
                         System.Globalization.CultureInfo.InvariantCulture, out var health) && health is >= 0 and <= 100;
                     rows[key] = valid ? $"{health:0.##}%" : T("HealthUnavailable");
                     healthHint = valid ? T("BSOHHint", rows[key]) : T("NoBSOHHint");
-                    if (int.TryParse(facts.GetValueOrDefault("ASOC"), out var asoc) && asoc is >= 0 and <= 100)
+                    bool samsungAsoc = !valid && string.Equals(facts.GetValueOrDefault("Brand"), "samsung", StringComparison.OrdinalIgnoreCase)
+                        && int.TryParse(facts.GetValueOrDefault("ASOC"), out var savedAsoc) && savedAsoc is > 0 and <= 100;
+                    if (samsungAsoc)
+                    {
+                        rows[key] = $"≈{facts["ASOC"]}%";
+                        healthHint = T("ASOCHealthHint", facts["ASOC"]);
+                    }
+                    if (!valid && !samsungAsoc && long.TryParse(facts.GetValueOrDefault("FullCapacity"), out var full) && full > 0
+                        && long.TryParse(facts.GetValueOrDefault("DesignCapacity"), out var design) && design > 0)
+                    {
+                        rows[key] = $"≈{Math.Min(100m, 100m * full / design):0.#}%";
+                        healthHint = T("CapacityHealthHint", full / 1000m, design / 1000m);
+                    }
+                    if (!samsungAsoc && int.TryParse(facts.GetValueOrDefault("ASOC"), out var asoc) && asoc is >= 0 and <= 100)
                         healthHint += Environment.NewLine + T("ASOCHint", asoc);
                     if (int.TryParse(facts.GetValueOrDefault(key), out var status) && status is >= 1 and <= 7)
                         healthHint += Environment.NewLine + T("ReportedCondition", T("Health" + status));
@@ -804,7 +960,12 @@ public partial class MainWindow : Window
         BootGlyph.Text = state switch { "BootLocked" => "\uE72E", "BootOpen" => "\uE785", _ => "\uE946" };
         BootGlyph.Foreground = FastbootLockText.Foreground = (System.Windows.Media.Brush)converter.ConvertFromString(bootStyle.Item1)!;
         BootBadge.Background = (System.Windows.Media.Brush)converter.ConvertFromString(bootStyle.Item2)!;
-        UnlockBoot.Visibility = Selected?.Tool == "fastboot" && facts.GetValueOrDefault("CanUnlock") == "1" ? Visibility.Visible : Visibility.Collapsed;
+        UnlockBoot.Visibility = Visibility.Visible;
+        UnlockBoot.IsEnabled = !busy && Selected is { Tool: "fastboot", State: "fastboot" } && facts.GetValueOrDefault("CanUnlock") == "1";
+        ReadUnlockStatus.IsEnabled = !busy && Selected is { Tool: "fastboot", State: "fastboot" };
+        OemUnlockText.Text = T("OemUnlock") + " · " + T(facts.GetValueOrDefault("OemUnlock", "OemUnknown"));
+        UnlockAvailability.Text = T(state == "BootOpen" ? "AlreadyUnlocked"
+            : facts.GetValueOrDefault("CanUnlock") == "1" ? "UnlockReady" : "UnlockReadHint");
         FlashPartition.Visibility = Selected?.Tool == "fastboot" && facts.GetValueOrDefault("BootState") == "BootOpen" ? Visibility.Visible : Visibility.Collapsed;
         FactsCard.Visibility = Selected == null ? Visibility.Collapsed : Visibility.Visible;
         DeviceFacts.ItemsSource = rows.Select(row =>
@@ -829,8 +990,15 @@ public partial class MainWindow : Window
                 _ => null
             };
             bool metered = int.TryParse(percent, out int level) && level is >= 0 and <= 100;
-            var hint = row.Key == "BatteryHealth" ? healthHint : "";
-            return new { Hint = hint, HintVisibility = hint.Length > 0 ? Visibility.Visible : Visibility.Collapsed, Label = T(row.Key), row.Value, Accent = accent, Tint = tint, Icon = icon,
+            var hint = row.Key == "BatteryHealth" ? healthHint : row.Key == "BootState"
+                ? facts.GetValueOrDefault("BootEvidence", "").Replace("BootConflictHint", T("BootConflictHint")) : "";
+            string secondary = row.Key == "Storage" && facts.TryGetValue("StorageRemaining", out var remaining)
+                ? T("StorageRemaining") + " · " + remaining : "";
+            return new { Hint = hint, HintVisibility = hint.Length > 0 ? Visibility.Visible : Visibility.Collapsed,
+                Secondary = secondary, SecondaryVisibility = secondary.Length > 0 ? Visibility.Visible : Visibility.Collapsed,
+                RamCleanVisibility = row.Key == "Ram" ? Visibility.Visible : Visibility.Collapsed,
+                RamCleanEnabled = !busy && Selected is { Tool: "adb", State: "device" },
+                Label = T(row.Key), row.Value, Accent = accent, Tint = tint, Icon = icon,
                 Level = metered ? level : 0, MeterVisibility = metered ? Visibility.Visible : Visibility.Collapsed };
         }).ToArray();
     }
@@ -838,9 +1006,10 @@ public partial class MainWindow : Window
     private void Render()
     {
         if (!initialized) return;
+        RenderActivity();
         PageTitle.Text = T(page == "Install" ? "ApplicationMenu" : page);
         PageDescription.Text = T(page + "Desc");
-        foreach (var panel in new[] { DevicePage, InstallPage, FastbootPage, RecoveryPage })
+        foreach (var panel in new[] { DevicePage, InstallPage, RootingPage, FastbootPage, RecoveryPage })
             panel.Visibility = panel.Name == page + "Page" ? Visibility.Visible : Visibility.Collapsed;
         OdinNotice.Visibility = odin ? Visibility.Visible : Visibility.Collapsed;
         TargetHint.Text = T(Targets.Items.Count == 0 ? (odin ? "OdinTitle" : mtp ? "WaitingAdb" : "EmptyTarget") : "PickTarget");
@@ -861,7 +1030,7 @@ public partial class MainWindow : Window
         MirrorReason.Text = reason;
         MirrorReason.Visibility = page != "Device" || string.IsNullOrWhiteSpace(reason) ? Visibility.Collapsed : Visibility.Visible;
         DeviceHeadline.ToolTip = Selected?.Model;
-        DeviceHeadline.Text = wifiSelected ? wifi!.SelectorText : Selected is { } device ? (device.Model.Length > 0 ? device.Model : device.SelectorText)
+        DeviceHeadline.Text = wifiSelected ? wifi!.SelectorText : Selected is { } device ? facts.GetValueOrDefault("MarketName", device.Model.Length > 0 ? device.Model : device.SelectorText)
             : T(Targets.Items.Count > 0 ? "PickTarget" : odin ? "OdinTitle" : !adb ? "NoToolsHero" : mtp ? "MtpTitle" : "EmptyHero");
         DeviceHint.Text = wifiSelected ? (wifiMessage.Length > 0 ? wifiMessage : T("WifiGuide")) : lockedSerial != null && Selected?.Serial == lockedSerial ? T("PhoneLocked") : Selected is { } active ? ModeText(active) + "   ·   " + T(active.State switch
         {
@@ -877,7 +1046,12 @@ public partial class MainWindow : Window
         bool landscape = viewing && !console && rotatedSerial == panelSerial;
         ConsolePage.Visibility = console ? Visibility.Visible : Visibility.Collapsed;
         AdbCommand.IsReadOnly = !adb;
-        RecoveryInput.IsReadOnly = !adb;
+        FastInput.IsEnabled = Selected is { Tool: "fastboot", State: "fastboot" } && consoleCommand == null && !busy;
+        RecoveryInput.IsEnabled = Selected is { Tool: "adb", State: "recovery" or "sideload" } && consoleCommand == null && !busy;
+        FastInput.IsReadOnly = !FastInput.IsEnabled;
+        RecoveryInput.IsReadOnly = !RecoveryInput.IsEnabled;
+        RootInput.IsEnabled = Selected is { Tool: "adb", State: "device" or "recovery" or "sideload" } && consoleCommand == null && !busy;
+        RootInput.IsReadOnly = !RootInput.IsEnabled;
 
         StopCommand.IsEnabled = consoleCommand != null;
         Grid.SetRowSpan(ManagementPane, landscape ? 1 : 2);
@@ -891,8 +1065,8 @@ public partial class MainWindow : Window
         AndroidWake.Visibility = viewing && Selected is { State: "device", Tool: "adb" } && Selected.Serial == lockedSerial ? Visibility.Visible : Visibility.Collapsed;
         AndroidWake.IsEnabled = !busy && !navigationPending;
         MirrorPane.Visibility = viewing && !console ? Visibility.Visible : Visibility.Collapsed;
-        StayAwake.IsEnabled = viewing && !dark && mirrorSession is { IsCancellationRequested: false };
-        StayAwake.IsChecked = viewing && panelSerial == stayAwakeSerial;
+        StayAwake.IsEnabled = !busy && !screenAwakeUpdating && Selected is { Tool: "adb", State: "device" };
+        StayAwake.IsChecked = Selected is { } awakeTarget && WantsScreenAwake(awakeTarget.Serial);
         FitMirrorColumn();
         AndroidCamera.IsEnabled = AndroidPower.IsEnabled = AndroidVolumeUp.IsEnabled = AndroidVolumeDown.IsEnabled = AndroidRotate.IsEnabled =
             AndroidHome.IsEnabled = AndroidBack.IsEnabled = AndroidRecent.IsEnabled = !busy && !navigationPending && viewing && Selected?.Serial == mirrorSerial && lockedSerial != mirrorSerial;
@@ -923,6 +1097,49 @@ public partial class MainWindow : Window
         LeaveRecovery.IsEnabled = Selected?.State == "recovery" && Allow(DeviceAction.System);
         StartSideload.Visibility = Selected is { Tool: "adb", State: "recovery" } ? Visibility.Visible : Visibility.Collapsed;
         SendZip.IsEnabled = zip.Length > 0 && Allow(DeviceAction.Sideload);
+        RootDaemonStatus.Text = T(rootStatusTarget == Selected ? rootDaemonKey : "RootStatusUnknown")
+            + (rootStatusTarget == Selected && rootDaemonVersion.Length > 0 ? " · " + rootDaemonVersion : "");
+        RootDaemonStatus.Foreground = rootStatusTarget == Selected && rootDaemonKey == "RootDaemonLoaded"
+            ? new SolidColorBrush(Color.FromRgb(39, 106, 80)) : Brushes.SlateGray;
+        RenderMagiskVersions(Allow(DeviceAction.Install));
+        RenderRootRuntime();
+        RootRecoveryStatus.Text = SupportedRootRecovery ? T("RootRecoveryDetected", rootRecoveryName!)
+            : T(Selected?.State == "sideload" ? "RootRecoveryBeforeSideload" : "RootRecoveryRequired");
+        RootDownload.IsEnabled = !busy && magiskRelease != null;
+        bool uninstallMagisk = MagiskActive;
+        if (uninstallMagisk) RootRecoveryStatus.Text = T("RootUninstallRecovery");
+        RootActionText.Text = T(uninstallMagisk ? "RootUninstall" : "RootFlashMagisk");
+        RootInstall.SetValue(System.Windows.Automation.AutomationProperties.NameProperty, RootActionText.Text);
+        RootActionIcon.Text = uninstallMagisk ? "\uE74D" : "\uE945";
+        if (uninstallMagisk)
+            RootInstall.Background = new SolidColorBrush(Color.FromRgb(181, 46, 60));
+        else RootInstall.ClearValue(Control.BackgroundProperty);
+        RootActionSteps.Text = T(uninstallMagisk ? "RootUninstallSteps" : "RootAutoSteps");
+        RootMethodTabs.Visibility = uninstallMagisk ? Visibility.Collapsed : Visibility.Visible;
+        RootInstall.IsEnabled = !busy && !rootStatusReading && Selected is { Tool: "adb" } rootTarget
+            && (rootTarget.State is "device" or "recovery" || rootTarget.State == "sideload" && SupportedRootRecovery);
+        if (uninstallMagisk && Selected?.State == "sideload") RootInstall.IsEnabled = false;
+        bool storageMethod = !uninstallMagisk && RootStorageMethod.IsChecked == true;
+        RootSideloadPanel.Visibility = storageMethod ? Visibility.Collapsed : Visibility.Visible;
+        RootAutoStatus.Visibility = !storageMethod && RootAutoStatus.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        RootTransferPanel.Visibility = storageMethod ? Visibility.Visible : Visibility.Collapsed;
+        RootTransferPackage.IsEnabled = !busy && !rootTransferReading && !RootTransferPresent
+            && Selected is { Tool: "adb", State: "device" } && rootTransferCheckedTarget == Selected
+            && magiskRelease != null && rootTransferCheckedHash == magiskRelease.Sha256;
+        RootTransferPackage.Content = T(RootTransferPresent ? "RootTransferReady" : "RootTransferPackage");
+        RootModuleList.IsEnabled = !busy;
+        RootCatalogRefresh.IsEnabled = !busy && !rootFetching && !rootHighlightsFetching && !rootRuntimeReading;
+        RootTransferRecovery.IsEnabled = !rootTransferReading && Allow(DeviceAction.Recovery)
+            && RootTransferPresent;
+        RootTransferAndroid.Visibility = Selected is { Tool: "adb", State: "recovery" } ? Visibility.Visible : Visibility.Collapsed;
+        RootTransferAndroid.IsEnabled = Allow(DeviceAction.System);
+        if (rootTransferViewSerial != Selected?.Serial)
+        {
+            rootTransferViewSerial = Selected?.Serial;
+            RootAutoStatus.Text = "";
+            RootAutoStatus.Visibility = Visibility.Collapsed;
+            RootTransferStatus.Text = RootTransferPresent ? T("RootTransferPresent", rootTransferredPath!) : "";
+        }
 
     }
 
@@ -941,13 +1158,6 @@ public partial class MainWindow : Window
             zip = dialog.FileName;
             Render();
         }
-    }
-
-    private void StayAwakeClick(object sender, RoutedEventArgs e)
-    {
-        if (mirrorSession == null || mirrorSerial == null || mirrorSession.IsCancellationRequested) return;
-        stayAwakeSerial = StayAwake.IsChecked == true ? mirrorSerial : null;
-        mirrorSession.Cancel();
     }
 
     private DateTime nextMirrorAttempt;
@@ -970,6 +1180,18 @@ public partial class MainWindow : Window
         finally { navigationPending = false; Render(); }
     }
     private bool navigationPending;
+
+    private void FitModeConsole(object sender, EventArgs e)
+    {
+        if (!initialized || PageScroll.ViewportHeight <= 0) return;
+        foreach (var output in new[] { FastOutput, RecoveryOutput, RootOutput })
+        {
+            if (!output.IsVisible) continue;
+            double top = output.TranslatePoint(new Point(), PageScroll).Y + PageScroll.VerticalOffset;
+            double height = Math.Max(96, Math.Floor(PageScroll.ViewportHeight - top - 68));
+            if (Math.Abs(output.Height - height) > 1) output.Height = height;
+        }
+    }
 
     private void FitAppList(object sender, EventArgs e)
     {
@@ -1014,7 +1236,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var result = await mirror.Watch(serial, stayAwakeSerial == serial, window =>
+            var result = await mirror.Watch(serial, false, window =>
             {
                 if (session.IsCancellationRequested || Selected?.Serial != serial || mirrorSession != session) return;
                 VideoSurface.Attach(window);
@@ -1044,7 +1266,7 @@ public partial class MainWindow : Window
 
     private void InventoryRowClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (sender is DockPanel panel && panel.Children[0] is CheckBox box && !box.IsMouseOver)
+        if (!busy && sender is DockPanel panel && panel.Children[0] is CheckBox box && box.IsEnabled && !box.IsMouseOver)
         {
             box.SetCurrentValue(CheckBox.IsCheckedProperty, box.IsChecked != true);
             UpdateBatchButtons();
@@ -1054,15 +1276,43 @@ public partial class MainWindow : Window
 
     private void InventoryChecked(object sender, RoutedEventArgs e) => UpdateBatchButtons();
 
+    private void InventoryCheckAllClick(object sender, RoutedEventArgs e)
+    {
+        if (busy || Selected is not { Tool: "adb", State: "device" }) return;
+        var visible = InventoryList.Items.Cast<InventoryRow>().Where(row => row.SelectionEnabled).ToArray();
+        bool check = !visible.All(row => row.Checked);
+        foreach (var row in visible) row.Checked = check;
+        InventoryList.Items.Refresh();
+        UpdateBatchButtons();
+    }
+
     private void UpdateBatchButtons()
     {
         var selected = inventory.Where(x => x.Checked).ToArray();
         bool ready = !busy && Selected is { Tool: "adb", State: "device" };
+        var visible = InventoryList.Items.Cast<InventoryRow>().ToArray();
+        var selectable = visible.Where(row => row.SelectionEnabled).ToArray();
+        InventoryCheckAll.IsEnabled = ready && selectable.Length > 0;
+        InventoryCheckAll.IsChecked = selectable.Length == 0 ? false : selectable.All(row => row.Checked) ? true
+            : selectable.Any(row => row.Checked) ? null : false;
+        RefreshApplications.IsEnabled = ready;
+        ApplicationCleanRam.IsEnabled = ready;
+        RunningRamCard.Visibility = RunningAppsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        ApplicationCleanRam.Visibility = RunningAppsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        BatchReleaseMemory.Visibility = RunningAppsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        BatchReleaseMemory.IsEnabled = ready && selected.Length > 0 && selected.All(row => row.CanReleaseMemory);
+        string selectLabel = T(selectable.Length > 0 && selectable.All(row => row.Checked) ? "UncheckAll" : "CheckAll");
+        InventoryCheckAll.ToolTip = selectLabel;
+        InventoryCheckAll.SetValue(System.Windows.Automation.AutomationProperties.NameProperty, selectLabel);
+        foreach (var action in new[] { InstallApk, RestoreApps, BatchCache, BatchDisable, BatchEnable, BatchUninstall })
+            action.Visibility = RunningAppsTab.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+        if (RunningAppsTab.IsChecked == true) CacheSettings.Visibility = Visibility.Collapsed;
         RestoreApps.IsEnabled = ready;
         InstallApk.IsEnabled = ready;
         bool installed = ready && selected.Length > 0 && selected.All(x => x.Entry.Installed);
         BatchUninstall.IsEnabled = installed;
         BatchCache.IsEnabled = installed;
+        if (Selected != cacheFailureTarget) CacheSettings.Visibility = Visibility.Collapsed;
         BatchDisable.IsEnabled = installed && selected.All(x => x.Entry.Enabled);
         BatchEnable.IsEnabled = installed && selected.All(x => !x.Entry.Enabled);
         BatchCount.Text = T("BatchCount", selected.Length);
@@ -1087,6 +1337,7 @@ public partial class MainWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             BatchStatus.Text = ex.Message;
+            Report("OperationFailed", ex.Message);
             return [];
         }
         var dialog = new Window { Owner = this, Title = T("RestoreBackup"), Width = 460, Height = 420,
@@ -1141,7 +1392,23 @@ public partial class MainWindow : Window
         panel.Children.Add(new ScrollViewer { Content = choices, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
         accept.Click += (_, _) => dialog.DialogResult = true;
         dialog.Content = panel;
-        return dialog.ShowDialog() == true ? choices.Children.OfType<CheckBox>().Where(x => x.IsChecked == true).Select(x => (string)x.Tag).ToArray() : [];
+        return ShowAppDialog(dialog) == true ? choices.Children.OfType<CheckBox>().Where(x => x.IsChecked == true).Select(x => (string)x.Tag).ToArray() : [];
+    }
+
+    private readonly HashSet<string> cacheSettingsTargets = [];
+    private Target? cacheFailureTarget;
+    private string? cacheFailurePackage;
+
+    private async void OpenCacheSettings(object sender, RoutedEventArgs e)
+    {
+        if (busy || Selected != cacheFailureTarget || cacheFailureTarget == null || cacheFailurePackage == null) return;
+        var target = cacheFailureTarget;
+        string package = cacheFailurePackage;
+        await Work(async () =>
+        {
+            await bridge.Execute(target, DeviceAction.AppSettings, package);
+            BatchStatus.Text = T("CacheSettingsHint");
+        });
     }
 
     private async void BatchClick(object sender, RoutedEventArgs e)
@@ -1166,44 +1433,134 @@ public partial class MainWindow : Window
         var details = action is DeviceAction.Disable or DeviceAction.Uninstall
             ? inventory.Where(x => x.Checked).Select(x => x.Entry.Package + "  (" + T("Risk" + x.Level) + ")")
             : action == DeviceAction.RestoreBackup ? values.Select(path => BackupPackage(path)) : values.AsEnumerable();
-        if (values.Length == 0 || !Confirm(label, T(action + "Risk"), device, string.Join(Environment.NewLine, details), action is DeviceAction.Enable or DeviceAction.Disable ? values : null)) return;
+        if (values.Length == 0 || !Confirm(label, T(action + "Risk"), device, string.Join(Environment.NewLine, details), action == DeviceAction.Install ? values.Select(path => Path.GetFileNameWithoutExtension(path) ?? path).ToArray() : action == DeviceAction.RestoreBackup ? values.Select(BackupPackage).ToArray() : values)) return;
         if (Selected != device) return;
         await Work(async () =>
         {
             int success = 0, failed = 0;
-            foreach (string value in values)
+            BatchProgressCard.Visibility = Visibility.Visible;
+            CacheSettings.Visibility = Visibility.Collapsed;
+            cacheFailureTarget = null;
+            cacheFailurePackage = null;
+            BatchResults.Clear();
+            BatchResults.Visibility = Visibility.Collapsed;
+            BatchStage.Text = T("BatchPreparing");
+            BatchCurrentApp.Text = label;
+            BatchProgress.IsIndeterminate = true;
+            BatchProgress.Maximum = values.Length;
+            BatchProgress.Value = 0;
+            BatchProgressCount.Text = $"0 / {values.Length}";
+            bool refreshNeeded = false;
+            bool cacheViaSettings = cacheSettingsTargets.Contains(device.Serial);
+            try
             {
-                BatchStatus.Text = $"{label} ({success + failed + 1}/{values.Length})";
-                try
+                // Finish an earlier inventory read before mutating its snapshot.
+                while (inventoryLoading) await Task.Delay(100);
+                if (action == DeviceAction.ClearCache && !cacheViaSettings)
                 {
-                    var backupIcon = action == DeviceAction.Uninstall ? inventory.FirstOrDefault(x => x.Entry.Package == value)?.Entry.Icon : null;
-                    await bridge.Execute(device, action, value, backupIcon);
-                    success++;
+                    try { await bridge.CheckCacheSupport(device); }
+                    catch (BridgeException ex) when (ex.Key == "CacheUnsupported") { cacheViaSettings = true; cacheSettingsTargets.Add(device.Serial); }
+                }
+                BatchProgress.IsIndeterminate = false;
+                foreach (string value in values)
+                {
                     var row = inventory.FirstOrDefault(x => x.Entry.Package == value);
-                    if (row != null && Selected == device)
+                    string name = row?.Entry.Name ?? Path.GetFileName(value);
+                    BatchStage.Text = label;
+                    BatchCurrentApp.Text = name;
+                    BatchStatus.Text = $"{label} ({success + failed + 1}/{values.Length})";
+                    refreshNeeded = true;
+                    try
                     {
-                        row.Checked = false;
-                        if (action == DeviceAction.Uninstall)
+                        var backupIcon = action == DeviceAction.Uninstall ? row?.Entry.Icon : null;
+                        if (action == DeviceAction.ClearCache)
                         {
-                            inventoryRevision++;
-                            inventory[inventory.IndexOf(row)] = row with { Entry = row.Entry with { Installed = false } };
-                            ApplyInventoryFilter();
-                            RenderDeviceFacts();
+                            if (!cacheViaSettings)
+                            {
+                                try { await bridge.Execute(device, action, value, cacheCapabilityChecked: true); }
+                                catch (BridgeException ex) when (ex.Key is "CacheUnconfirmed" or "TimedOut")
+                                { cacheViaSettings = true; cacheSettingsTargets.Add(device.Serial); }
+                            }
+                            if (cacheViaSettings)
+                            {
+                                BatchStage.Text = T("CacheViaSettings");
+                                await bridge.ClearCacheInSettings(device, value, name);
+                            }
+                        }
+                        else await bridge.Execute(device, action, value, backupIcon);
+                        success++;
+                        BatchResults.AppendText(T("BatchItemDone", name) + Environment.NewLine);
+                        if (row != null && Selected == device)
+                        {
+                            row.Checked = false;
+                            if (action is DeviceAction.Uninstall or DeviceAction.Disable or DeviceAction.Enable)
+                            {
+                                inventoryRevision++;
+                                var entry = action == DeviceAction.Uninstall ? row.Entry with { Installed = false }
+                                    : row.Entry with { Enabled = action == DeviceAction.Enable };
+                                inventory[inventory.IndexOf(row)] = row with { Entry = entry };
+                                ApplyInventoryFilter();
+                                RenderDeviceFacts();
+                            }
                         }
                     }
+                    catch (BridgeException ex)
+                    {
+                        failed++;
+                        if (action == DeviceAction.ClearCache)
+                        {
+                            cacheFailureTarget = device;
+                            cacheFailurePackage = value;
+                            CacheSettings.Content = T("OpenAppSettings") + " · " + name;
+                            CacheSettings.Visibility = Visibility.Visible;
+                        }
+                        BatchResults.AppendText(T("BatchItemFailed", name, T(ex.Key)) + Environment.NewLine);
+                        AppendLine(value);
+                        ReportError(ex);
+                        if (ex.Key is "TargetChanged" or "CacheUnconfirmed" or "TimedOut" or "UnlockPhone") break;
+                    }
+                    finally
+                    {
+                        BatchProgress.Value = success + failed;
+                        BatchProgressCount.Text = $"{success + failed} / {values.Length}";
+                        BatchResults.Visibility = Visibility.Visible;
+                        BatchResults.ScrollToEnd();
+                    }
                 }
-                catch (BridgeException ex)
+                if (refreshNeeded && Selected == device)
                 {
-                    failed++;
-                    AppendLine(value);
-                    ReportError(ex);
-                    if (ex.Key == "TargetChanged") break;
+                    BatchStage.Text = T("BatchVerifying");
+                    BatchCurrentApp.Text = T("BatchReloadHint");
+                    BatchProgress.IsIndeterminate = true;
+                    await LoadInventory(device, sizesOnly: action is not (DeviceAction.Install or DeviceAction.RestoreBackup));
+                    await RefreshRunningApps(device, true);
+                    nextFactsRead = nextAppsRead = DateTime.MinValue;
                 }
+                BatchStatus.Text = T("BatchResult", success, failed, values.Length - success - failed);
+                Report("BatchResult", BatchResults.Text, success, failed, values.Length - success - failed);
+                BatchStage.Text = T("BatchFinished");
+                BatchCurrentApp.Text = BatchStatus.Text;
             }
-            BatchStatus.Text = T("BatchResult", success, failed, values.Length - success - failed);
-            AppendLine(BatchStatus.Text);
-            InventoryList.Items.Refresh();
-            nextInventory = nextFactsRead = nextAppsRead = DateTime.MinValue;
+            finally
+            {
+                BatchProgress.IsIndeterminate = false;
+                BatchProgress.Value = success + failed;
+                BatchProgressCount.Text = $"{success + failed} / {values.Length}";
+                if (!refreshNeeded) BatchProgressCard.Visibility = Visibility.Collapsed;
+                InventoryList.Items.Refresh();
+            }
+        });
+    }
+
+    private async void ReadUnlockStatusClick(object sender, RoutedEventArgs e)
+    {
+        if (busy || Selected is not { Tool: "fastboot", State: "fastboot" } target) return;
+        await Work(async () =>
+        {
+            var status = await bridge.ReadBootState(target);
+            if (Selected != target) return;
+            foreach (var (key, value) in status) facts[key] = value;
+            RenderDeviceFacts();
         });
     }
 
@@ -1236,7 +1593,7 @@ public partial class MainWindow : Window
             next.Click += (_, _) => dialog.DialogResult = true;
             panel.Children.Add(next);
             dialog.Content = panel;
-            if (dialog.ShowDialog() != true || choice.SelectedItem is not string partition) return;
+            if (ShowAppDialog(dialog) != true || choice.SelectedItem is not string partition) return;
             var file = new OpenFileDialog { Filter = "Android image (*.img)|*.img", Title = T("FlashPickFile") };
             if (file.ShowDialog(this) != true || Selected != target) return;
             if (!Confirm(T("FlashImage"), T("FlashRisk"), target, partition + Environment.NewLine + file.FileName)) return;
@@ -1259,7 +1616,7 @@ public partial class MainWindow : Window
         if (busy || Selected is not { } device || !AndroidBridge.Allows(device, action)) return;
         var (label, risk) = action switch
         {
-            DeviceAction.StartSideload => ("StartSideload", "StartSideloadHint"),
+            DeviceAction.StartSideload => ("StartSideload", "StartSideloadRisk"),
             DeviceAction.Install => ("Install", "InstallRisk"), DeviceAction.Sideload => ("Sideload", "SideloadRisk"),
             DeviceAction.Disable => ("Disable", "DisableRisk"), DeviceAction.Enable => ("Enable", "EnableRisk"),
             DeviceAction.Bootloader => ("ToBoot", "RebootRisk"), DeviceAction.Recovery => ("ToRecovery", "RebootRisk"),
@@ -1331,7 +1688,8 @@ public partial class MainWindow : Window
                     entries.Children.Add(text);
                     continue;
                 }
-                var app = inventory.FirstOrDefault(x => x.Entry.Package == packages[i]);
+                var package = i < packages.Length ? packages[i] : lines[i];
+                var app = inventory.FirstOrDefault(x => x.Entry.Package == package);
                 var item = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
                 FrameworkElement thumbnail = app?.Image is { } icon
                     ? new System.Windows.Controls.Image { Source = icon }
@@ -1339,7 +1697,13 @@ public partial class MainWindow : Window
                 thumbnail.Width = thumbnail.Height = 32;
                 thumbnail.Margin = new Thickness(0, 0, 8, 0);
                 item.Children.Add(thumbnail);
-                item.Children.Add(text);
+                var appInfo = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                appInfo.Children.Add(new TextBlock { Text = app?.Entry.Name ?? package,
+                    FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+                text.Foreground = Brushes.SlateGray;
+                text.FontSize = 12;
+                appInfo.Children.Add(text);
+                item.Children.Add(appInfo);
                 entries.Children.Add(item);
             }
             body.Children.Add(new ScrollViewer { Margin = new Thickness(0, 10, 0, 0), MaxHeight = 190, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = entries });
@@ -1356,7 +1720,7 @@ public partial class MainWindow : Window
             GlassFrameThickness = new Thickness(0), ResizeBorderThickness = new Thickness(0), UseAeroCaptionButtons = false });
         dialog.Content = body;
         dialog.ContentRendered += (_, _) => cancel.Focus();
-        return dialog.ShowDialog() == true;
+        return ShowAppDialog(dialog, true) == true;
     }
 
     private void OnClosing(object? sender, CancelEventArgs e)

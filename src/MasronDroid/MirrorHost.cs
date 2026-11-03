@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using System.Windows.Input;
 
 namespace MasronDroid;
 
@@ -48,9 +49,25 @@ public sealed class MirrorHost : HwndHost
             SetWindowPos(video, 0, 0, 0, Math.Max(1, rect.Right), Math.Max(1, rect.Bottom), 0x4054);
     }
 
+    private bool FocusVideo()
+    {
+        if (video == 0 || !IsVisible || !IsEnabled || !IsWindow(video)) return false;
+        SetFocus(video);
+        return GetFocus() == video;
+    }
+
+    protected override bool TabIntoCore(TraversalRequest request) => FocusVideo();
+
+    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
+    {
+        base.OnGotKeyboardFocus(e);
+        FocusVideo();
+    }
+
     protected override nint WndProc(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
     {
         if (msg == 5 && video != 0) Fit();
+        if (msg is 0x0007 or 0x0021) FocusVideo();
         return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
     }
 
@@ -63,5 +80,8 @@ public sealed class MirrorHost : HwndHost
     [DllImport("user32")] private static extern int SetWindowLongW(nint hwnd, int index, int value);
     [DllImport("user32", SetLastError = true)] private static extern nint SetParent(nint child, nint parent);
     [DllImport("user32")] private static extern bool GetClientRect(nint hwnd, out Rect rect);
+    [DllImport("user32")] private static extern bool IsWindow(nint hwnd);
+    [DllImport("user32")] private static extern nint SetFocus(nint hwnd);
+    [DllImport("user32")] private static extern nint GetFocus();
     [DllImport("user32")] private static extern bool SetWindowPos(nint hwnd, nint after, int x, int y, int width, int height, uint flags);
 }
