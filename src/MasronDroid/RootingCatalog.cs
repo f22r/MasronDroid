@@ -19,7 +19,7 @@ internal static partial class RootingCatalog
 {
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(90) };
 
-    static RootingCatalog() => Client.DefaultRequestHeaders.UserAgent.ParseAdd("MasronDroid/0.0.5");
+    static RootingCatalog() => Client.DefaultRequestHeaders.UserAgent.ParseAdd("MasronDroid/0.0.6");
 
     internal static string ModuleCachePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MasronDroid", "magisk-modules.json");
