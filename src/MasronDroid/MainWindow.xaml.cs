@@ -1054,6 +1054,12 @@ public partial class MainWindow : Window
         RootInput.IsReadOnly = !RootInput.IsEnabled;
 
         StopCommand.IsEnabled = consoleCommand != null;
+        var headerParent = landscape || console ? HeaderDock : HeaderScroll;
+        if (HeaderPane.Parent is Border currentHeaderParent && currentHeaderParent != headerParent)
+        {
+            currentHeaderParent.Child = null;
+            headerParent.Child = HeaderPane;
+        }
         Grid.SetRowSpan(ManagementPane, landscape ? 1 : 2);
         Grid.SetColumnSpan(ManagementPane, landscape ? 2 : 1);
         PageScroll.Visibility = (landscape || console) ? Visibility.Collapsed : Visibility.Visible;
